@@ -33,6 +33,13 @@ export class DrizzleDashboardReader extends DashboardReader {
         activeProducts: number(sql`COUNT(*)`),
         totalUnits: number(sql`COALESCE(SUM(${products.stock}), 0)`),
         inventoryValueUsd: number(sql`COALESCE(SUM(${products.stock} * ${products.costUsd}), 0)`),
+        inventoryValueAtPriceUsd: number(
+          sql`COALESCE(SUM(${products.stock} * ${products.priceUsd}), 0)`,
+        ),
+        withoutPrice: number(sql`COALESCE(SUM(${products.priceUsd} IS NULL), 0)`),
+        consignmentUnits: number(
+          sql`COALESCE(SUM(CASE WHEN ${products.isConsignment} THEN ${products.stock} ELSE 0 END), 0)`,
+        ),
         outOfStock: number(sql`COALESCE(SUM(${products.stock} = 0), 0)`),
         lowStock: number(
           sql`COALESCE(SUM(${products.stock} > 0 AND ${products.minStock} > 0 AND ${products.stock} <= ${products.minStock}), 0)`,
@@ -59,6 +66,9 @@ export class DrizzleDashboardReader extends DashboardReader {
       activeProducts: stock?.activeProducts ?? 0,
       totalUnits: stock?.totalUnits ?? 0,
       inventoryValueUsd: stock?.inventoryValueUsd ?? 0,
+      inventoryValueAtPriceUsd: stock?.inventoryValueAtPriceUsd ?? 0,
+      withoutPrice: stock?.withoutPrice ?? 0,
+      consignmentUnits: stock?.consignmentUnits ?? 0,
       outOfStock: stock?.outOfStock ?? 0,
       lowStock: stock?.lowStock ?? 0,
       unconfiguredMinStock: stock?.unconfiguredMinStock ?? 0,

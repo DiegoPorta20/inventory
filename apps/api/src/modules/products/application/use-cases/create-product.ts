@@ -14,13 +14,18 @@ export interface CreateProductInput {
   code?: string;
   name: string;
   description?: string | null;
+  specification?: string | null;
   categoryId?: number | null;
+  costCenterId?: number | null;
   unit: UnitOfMeasure;
   minStock?: number;
   reorderQuantity?: number;
   location?: string | null;
   costUsd?: number | null;
   priceUsd?: number | null;
+  wholesalePriceUsd?: number | null;
+  wholesaleMinQty?: number | null;
+  isConsignment?: boolean;
   notes?: string | null;
   isActive?: boolean;
   equipmentIds?: number[];
@@ -35,8 +40,13 @@ export class CreateProduct {
 
   async execute(input: CreateProductInput): Promise<Product> {
     await this.references.assertCategory(input.categoryId);
+    await this.references.assertCostCenter(input.costCenterId);
     await this.references.assertEquipment(input.equipmentIds);
-    this.references.assertPricing(input.costUsd, input.priceUsd);
+    this.references.assertPricing({
+      costUsd: input.costUsd,
+      priceUsd: input.priceUsd,
+      wholesalePriceUsd: input.wholesalePriceUsd,
+    });
 
     const isInternalCode = !input.code;
     const code = input.code
@@ -52,13 +62,18 @@ export class CreateProduct {
         isInternalCode,
         name: normalizeProductName(input.name),
         description: input.description ?? null,
+        specification: input.specification ?? null,
         categoryId: input.categoryId ?? null,
+        costCenterId: input.costCenterId ?? null,
         unit: input.unit,
         minStock: input.minStock ?? 0,
         reorderQuantity: input.reorderQuantity ?? 0,
         location: input.location ?? null,
         costUsd: input.costUsd ?? null,
         priceUsd: input.priceUsd ?? null,
+        wholesalePriceUsd: input.wholesalePriceUsd ?? null,
+        wholesaleMinQty: input.wholesaleMinQty ?? null,
+        isConsignment: input.isConsignment ?? false,
         notes: input.notes ?? null,
         isActive: input.isActive ?? true,
       },

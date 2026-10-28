@@ -91,6 +91,9 @@ type Tab = 'movements' | 'imports';
         @if (!p.isActive) {
           <ui-badge tone="neutral">Inactivo</ui-badge>
         }
+        @if (p.isConsignment) {
+          <ui-badge tone="info">Consignación</ui-badge>
+        }
         @if (p.categoryPath) {
           <span class="text-sm text-slate-500">{{ p.categoryPath }}</span>
         }
@@ -129,14 +132,62 @@ type Tab = 'movements' | 'imports';
 
         <section class="card p-4">
           <h2 class="section-title mb-3">Precios</h2>
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-3">
-            <div>
-              <dt class="text-xs text-slate-500">Costo</dt>
-              <dd class="text-lg font-semibold tabular-nums">{{ p.costUsd | usd: true }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Precio</dt>
-              <dd class="text-lg font-semibold tabular-nums">{{ p.priceUsd | usd }}</dd>
+          @if (p.pricing.retail; as retail) {
+            <p class="text-2xl font-semibold tabular-nums text-slate-900">
+              {{ retail.priceWithIgvPen | pen }}
+              <span class="text-sm font-normal text-slate-500">S/ con IGV</span>
+            </p>
+            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div>
+                <dt class="text-xs text-slate-500">USD sin IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retail.priceUsd | usd }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retail.igvUsd | usd }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">USD con IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retail.priceWithIgvUsd | usd }}</dd>
+              </div>
+              @if (p.pricing.marginPercent !== null) {
+                <div>
+                  <dt class="text-xs text-slate-500">Margen</dt>
+                  <dd
+                    class="font-medium tabular-nums"
+                    [class]="p.pricing.marginPercent >= 0 ? 'text-emerald-700' : 'text-rose-600'"
+                  >
+                    {{ p.pricing.marginPercent >= 0 ? '+' : '' }}{{ p.pricing.marginPercent }}%
+                  </dd>
+                </div>
+              }
+            </dl>
+            @if (p.pricing.wholesale; as wholesale) {
+              <div class="mt-3 border-t border-slate-100 pt-3">
+                <p class="text-xs text-slate-500">
+                  Por mayor
+                  @if (wholesale.minQty) {
+                    (desde {{ wholesale.minQty | quantity }} unidades)
+                  }
+                </p>
+                <p class="mt-0.5 text-lg font-semibold tabular-nums text-slate-900">
+                  {{ wholesale.priceWithIgvPen | pen }}
+                  <span class="text-xs font-normal text-slate-400">{{
+                    wholesale.priceUsd | usd
+                  }}</span>
+                </p>
+              </div>
+            }
+          } @else {
+            <p class="text-sm text-slate-500">Sin precio registrado.</p>
+            <a class="btn btn-secondary btn-sm mt-3" [routerLink]="['/products', p.id, 'edit']">
+              Registrar precio
+            </a>
+          }
+          <dl class="mt-3 border-t border-slate-100 pt-3">
+            <div class="flex justify-between gap-3 text-sm">
+              <dt class="text-slate-500">Costo</dt>
+              <dd class="font-medium tabular-nums">{{ p.costUsd | usd: true }}</dd>
             </div>
           </dl>
         </section>
@@ -156,7 +207,21 @@ type Tab = 'movements' | 'imports';
               <dt class="text-slate-500">Categoría</dt>
               <dd class="font-medium text-right">{{ p.categoryName ?? 'Sin categoría' }}</dd>
             </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Centro de costo</dt>
+              <dd class="font-medium text-right">{{ p.costCenterName ?? '—' }}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Consignación</dt>
+              <dd class="font-medium">{{ p.isConsignment ? 'Sí' : 'No' }}</dd>
+            </div>
           </dl>
+          @if (p.specification) {
+            <div class="mt-3">
+              <p class="text-xs text-slate-500">Especificación</p>
+              <p class="mt-1 text-sm whitespace-pre-line text-slate-700">{{ p.specification }}</p>
+            </div>
+          }
           @if (p.equipment.length > 0) {
             <div class="mt-3">
               <p class="text-xs text-slate-500">Equipos compatibles</p>

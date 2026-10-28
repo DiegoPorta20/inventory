@@ -9,14 +9,20 @@ export interface Product {
   isInternalCode: boolean;
   name: string;
   description: string | null;
+  specification: string | null;
   categoryId: number | null;
+  costCenterId: number | null;
   unit: UnitOfMeasure;
   stock: number;
   minStock: number;
   reorderQuantity: number;
   location: string | null;
   costUsd: number | null;
+  /** Sale price in USD without IGV. */
   priceUsd: number | null;
+  wholesalePriceUsd: number | null;
+  wholesaleMinQty: number | null;
+  isConsignment: boolean;
   notes: string | null;
   isActive: boolean;
   createdAt: Date;
@@ -25,6 +31,7 @@ export interface Product {
 
 export interface ProductListItem extends Product {
   categoryName: string | null;
+  costCenterName: string | null;
   stockStatus: StockStatus;
   incomingQty: number;
 }

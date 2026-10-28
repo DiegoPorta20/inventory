@@ -6,13 +6,13 @@ import { firstValueFrom } from 'rxjs';
 import { errorMessage } from '../../../core/http/api-utils';
 import { UNIT_LABELS } from '../../../shared/models/labels';
 import type {
-  ProductListItem,
+  PricedProduct,
   StockStatusFilter,
   UnitOfMeasure,
 } from '../../../shared/models/models';
 import { FORMAT_PIPES } from '../../../shared/pipes/format.pipes';
 import { useQueryFilters } from '../../../shared/util/query-filters';
-import { StockBadgeComponent } from '../../../shared/ui/badge.components';
+import { BadgeComponent, StockBadgeComponent } from '../../../shared/ui/badge.components';
 import { IconComponent } from '../../../shared/ui/icon.component';
 import { PageHeaderComponent } from '../../../shared/ui/layout.components';
 import { PaginationComponent } from '../../../shared/ui/pagination.component';
@@ -35,13 +35,14 @@ import {
   type ProductFilterValues,
 } from '../components/product-filters.component';
 
-const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'cost'];
+const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'cost', 'price'];
 
 @Component({
   selector: 'app-products-list-page',
   imports: [
     RouterLink,
     FORMAT_PIPES,
+    BadgeComponent,
     StockBadgeComponent,
     IconComponent,
     PageHeaderComponent,
@@ -62,6 +63,15 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
       >
         <ui-icon name="download" [size]="4" /> {{ exporting() ? 'Exportando…' : 'Exportar Excel' }}
       </button>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        [disabled]="exportingPriceList()"
+        (click)="exportPriceList()"
+      >
+        <ui-icon name="download" [size]="4" />
+        {{ exportingPriceList() ? 'Exportando…' : 'Lista de precios' }}
+      </button>
       <button type="button" class="btn btn-secondary" (click)="registerMovement()">
         <ui-icon name="swap" [size]="4" /> Registrar movimiento
       </button>
@@ -74,6 +84,7 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
       class="block"
       [values]="filterValues()"
       [categories]="categories.value() ?? []"
+      [costCenters]="costCenters.value() ?? []"
       [equipment]="equipment.value() ?? []"
       [imports]="imports.value()?.items ?? []"
       (filterChange)="onFilterChange($event)"
@@ -82,7 +93,7 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
 
     <div class="card mt-4">
       @if (products.isLoading()) {
-        <ui-table-skeleton [rows]="10" [cols]="7" />
+        <ui-table-skeleton [rows]="10" [cols]="8" />
       } @else if (products.error()) {
         <ui-error-state>
           <button type="button" class="btn btn-secondary" (click)="products.reload()">
@@ -151,6 +162,15 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                     Costo USD {{ sortIcon('cost') }}
                   </button>
                 </th>
+                <th class="num" [attr.aria-sort]="ariaSort('price')">
+                  <button
+                    type="button"
+                    class="ml-auto flex items-center gap-1"
+                    (click)="sortBy('price')"
+                  >
+                    Precio {{ sortIcon('price') }}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -175,12 +195,20 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                     }
                   </td>
                   <td>
-                    <span class="block max-w-sm truncate font-medium text-slate-800">{{
-                      product.name
-                    }}</span>
-                    <span class="text-xs text-slate-500">{{
-                      product.categoryName ?? 'Sin categoría'
-                    }}</span>
+                    <span class="flex items-center gap-1.5">
+                      <span class="block max-w-sm truncate font-medium text-slate-800">{{
+                        product.name
+                      }}</span>
+                      @if (product.isConsignment) {
+                        <ui-badge tone="info">Consignación</ui-badge>
+                      }
+                    </span>
+                    <span class="text-xs text-slate-500">
+                      {{ product.categoryName ?? 'Sin categoría' }}
+                      @if (product.costCenterName) {
+                        · {{ product.costCenterName }}
+                      }
+                    </span>
                   </td>
                   <td class="num">
                     {{ product.stock | quantity }}
@@ -192,6 +220,16 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                   </td>
                   <td><ui-stock-badge [status]="product.stockStatus" /></td>
                   <td class="num">{{ product.costUsd | usd }}</td>
+                  <td class="num">
+                    @if (product.pricing.retail; as retail) {
+                      <span class="block font-medium text-slate-800">{{
+                        retail.priceWithIgvPen | pen
+                      }}</span>
+                      <span class="block text-xs text-slate-400">{{ retail.priceUsd | usd }}</span>
+                    } @else {
+                      —
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -218,6 +256,9 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
           <div class="flex flex-wrap gap-2">
             <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('category')">
               <ui-icon name="tag" [size]="4" /> Asignar categoría
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('costCenter')">
+              <ui-icon name="tag" [size]="4" /> Asignar centro de costo
             </button>
             <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('stockLevels')">
               <ui-icon name="box" [size]="4" /> Definir stock mínimo / reposición
@@ -246,12 +287,15 @@ export class ProductsListPage {
   protected readonly filters = useQueryFilters({
     search: '',
     categoryId: 0,
+    costCenterId: 0,
     unit: '',
     stockStatus: '',
     equipmentId: 0,
     importOrderId: 0,
     active: 'active',
     internalCode: '',
+    hasPrice: '',
+    consignment: '',
     page: 1,
     pageSize: 25,
     sortBy: 'code',
@@ -260,18 +304,22 @@ export class ProductsListPage {
 
   protected readonly selection = signal<Set<number>>(new Set());
   protected readonly exporting = signal(false);
+  protected readonly exportingPriceList = signal(false);
 
   protected readonly filterValues = computed<ProductFilterValues>(() => {
     const v = this.filters.value();
     return {
       search: v.search,
       categoryId: v.categoryId,
+      costCenterId: v.costCenterId,
       unit: v.unit,
       stockStatus: v.stockStatus,
       equipmentId: v.equipmentId,
       importOrderId: v.importOrderId,
       active: v.active,
       internalCode: v.internalCode,
+      hasPrice: v.hasPrice,
+      consignment: v.consignment,
     };
   });
 
@@ -285,6 +333,7 @@ export class ProductsListPage {
   });
 
   protected readonly categories = rxResource({ stream: () => this.api.listCategories() });
+  protected readonly costCenters = rxResource({ stream: () => this.api.listCostCenters() });
   protected readonly equipment = rxResource({ stream: () => this.api.listEquipment() });
   protected readonly imports = rxResource({ stream: () => this.api.listImports() });
 
@@ -310,12 +359,15 @@ export class ProductsListPage {
     return {
       search: v.search || undefined,
       categoryId: v.categoryId || undefined,
+      costCenterId: v.costCenterId || undefined,
       unit: (v.unit as UnitOfMeasure) || undefined,
       stockStatus: (v.stockStatus as StockStatusFilter) || undefined,
       equipmentId: v.equipmentId || undefined,
       importOrderId: v.importOrderId || undefined,
       isActive: v.active === 'all' ? undefined : v.active === 'active',
       isInternalCode: v.internalCode === '' ? undefined : v.internalCode === 'true',
+      isConsignment: v.consignment === 'true' ? true : undefined,
+      hasPrice: v.hasPrice === '' ? undefined : v.hasPrice === 'true',
       sortBy: v.sortBy as ProductSortBy,
       sortDirection: v.sortDirection as SortDirection,
       page: v.page,
@@ -378,7 +430,7 @@ export class ProductsListPage {
     this.selection.set(new Set());
   }
 
-  protected openDetail(product: ProductListItem, event: MouseEvent): void {
+  protected openDetail(product: PricedProduct, event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (target.closest('input, a, button')) return;
     void this.router.navigate(['/products', product.id]);
@@ -393,8 +445,12 @@ export class ProductsListPage {
     const ids = [...this.selection()];
     if (ids.length === 0) return;
     const applied = await firstValueFrom(
-      openBulkDialog(this.dialog, { action, ids, categories: this.categories.value() ?? [] })
-        .closed,
+      openBulkDialog(this.dialog, {
+        action,
+        ids,
+        categories: this.categories.value() ?? [],
+        costCenters: this.costCenters.value() ?? [],
+      }).closed,
     );
     if (applied) {
       this.clearSelection();
@@ -418,6 +474,27 @@ export class ProductsListPage {
       },
       error: (error: unknown) => {
         this.exporting.set(false);
+        this.toast.error(errorMessage(error));
+      },
+    });
+  }
+
+  protected exportPriceList(): void {
+    if (this.exportingPriceList()) return;
+    this.exportingPriceList.set(true);
+    const { page, pageSize, ...rest } = this.requestFilters();
+    this.api.exportPriceList(rest).subscribe({
+      next: (blob) => {
+        this.exportingPriceList.set(false);
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'lista-de-precios.xlsx';
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error: unknown) => {
+        this.exportingPriceList.set(false);
         this.toast.error(errorMessage(error));
       },
     });

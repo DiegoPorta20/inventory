@@ -52,7 +52,15 @@ const TREND_DAYS = 30;
     } @else if (data(); as d) {
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ui-stat-card label="Productos activos" [value]="d.totals.activeProducts | quantity" />
-        <ui-stat-card label="Unidades en stock" [value]="d.totals.totalUnits | quantity" />
+        <ui-stat-card
+          label="Unidades en stock"
+          [value]="d.totals.totalUnits | quantity"
+          [hint]="
+            d.totals.consignmentUnits > 0
+              ? (d.totals.consignmentUnits | quantity) + ' u. en consignación'
+              : undefined
+          "
+        />
         <ui-stat-card
           label="Valor del inventario"
           [value]="d.totals.inventoryValueUsd | usd"
@@ -61,13 +69,18 @@ const TREND_DAYS = 30;
           "
         />
         <ui-stat-card
+          label="Valor a precio de venta"
+          [value]="d.totals.inventoryValueAtPriceUsd | usd"
+          hint="Sin IGV, en USD"
+        />
+        <ui-stat-card
           label="En camino"
           [value]="(d.totals.incomingUnits | quantity) + ' u.'"
           [hint]="d.totals.openImports + ' importaciones abiertas'"
         />
       </div>
 
-      <div class="mt-4 grid gap-4 md:grid-cols-3">
+      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <a
           routerLink="/products"
           [queryParams]="{ stockStatus: 'OUT' }"
@@ -113,6 +126,22 @@ const TREND_DAYS = 30;
               d.totals.unconfiguredMinStock | quantity
             }}</span>
             <span class="text-xs text-slate-500">Sin stock mínimo configurado</span>
+          </span>
+        </a>
+        <a
+          routerLink="/products"
+          [queryParams]="{ hasPrice: false }"
+          class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md"
+        >
+          <span
+            class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
+            ><ui-icon name="tag" [size]="5"
+          /></span>
+          <span>
+            <span class="block text-2xl font-semibold tabular-nums">{{
+              d.totals.withoutPrice | quantity
+            }}</span>
+            <span class="text-xs text-slate-500">Productos sin precio</span>
           </span>
         </a>
       </div>

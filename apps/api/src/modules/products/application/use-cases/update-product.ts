@@ -19,19 +19,29 @@ export class UpdateProduct {
     if (!existing) throw new NotFoundError('Product', id);
 
     await this.references.assertCategory(input.categoryId);
+    await this.references.assertCostCenter(input.costCenterId);
     await this.references.assertEquipment(input.equipmentIds);
-    this.references.assertPricing(input.costUsd, input.priceUsd);
+    this.references.assertPricing({
+      costUsd: input.costUsd,
+      priceUsd: input.priceUsd,
+      wholesalePriceUsd: input.wholesalePriceUsd,
+    });
 
     const changes: ProductChanges = {
       name: input.name === undefined ? undefined : normalizeProductName(input.name),
       description: input.description,
+      specification: input.specification,
       categoryId: input.categoryId,
+      costCenterId: input.costCenterId,
       unit: input.unit,
       minStock: input.minStock,
       reorderQuantity: input.reorderQuantity,
       location: input.location,
       costUsd: input.costUsd,
       priceUsd: input.priceUsd,
+      wholesalePriceUsd: input.wholesalePriceUsd,
+      wholesaleMinQty: input.wholesaleMinQty,
+      isConsignment: input.isConsignment,
       notes: input.notes,
       isActive: input.isActive,
     };

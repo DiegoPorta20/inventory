@@ -9,6 +9,8 @@ import {
   exists,
   gt,
   inArray,
+  isNotNull,
+  isNull,
   like,
   lte,
   or,
@@ -21,6 +23,7 @@ import { DatabaseService } from '../../../shared/infrastructure/database/databas
 import { isDuplicateEntry } from '../../../shared/infrastructure/database/mysql-errors.js';
 import {
   categories,
+  costCenters,
   equipmentModels,
   importOrderItems,
   productEquipment,
@@ -48,22 +51,25 @@ type ProductRow = typeof products.$inferSelect;
 
 const toProduct = (row: ProductRow): Product => ({ ...row, unit: row.unit as UnitOfMeasure });
 
-const toListItem = (
-  row: ProductRow,
-  categoryName: string | null,
-  incomingQty: number,
-): ProductListItem => ({
-  ...toProduct(row),
-  categoryName,
-  incomingQty,
-  stockStatus: stockStatusOf(row.stock, row.minStock),
-});
-
-const toListRow = (row: {
+interface ListRow {
   product: ProductRow;
   categoryName: string | null;
+  costCenterName: string | null;
   incomingQty: number;
-}) => toListItem(row.product, row.categoryName, row.incomingQty);
+}
+
+const toListRow = ({
+  product,
+  categoryName,
+  costCenterName,
+  incomingQty,
+}: ListRow): ProductListItem => ({
+  ...toProduct(product),
+  categoryName,
+  costCenterName,
+  incomingQty,
+  stockStatus: stockStatusOf(product.stock, product.minStock),
+});
 
 const SORT_COLUMNS = {
   code: products.code,
@@ -71,6 +77,7 @@ const SORT_COLUMNS = {
   stock: products.stock,
   updatedAt: products.updatedAt,
   cost: products.costUsd,
+  price: products.priceUsd,
 } as const satisfies Record<ProductSortField, unknown>;
 
 const escapeLike = (value: string): string => value.replace(/[\\%_]/g, '\\$&');
@@ -127,11 +134,13 @@ export class DrizzleProductRepository extends ProductRepository {
       .select({
         product: products,
         categoryName: categories.name,
+        costCenterName: costCenters.name,
         parentName: parent.name,
         incomingQty: incomingQtySql,
       })
       .from(products)
       .leftJoin(categories, eq(categories.id, products.categoryId))
+      .leftJoin(costCenters, eq(costCenters.id, products.costCenterId))
       .leftJoin(parent, eq(parent.id, categories.parentId))
       .where(eq(products.id, id))
       .limit(1);
@@ -150,7 +159,7 @@ export class DrizzleProductRepository extends ProductRepository {
       .orderBy(equipmentModels.name);
 
     return {
-      ...toListItem(row.product, row.categoryName, row.incomingQty),
+      ...toListRow(row),
       categoryPath: row.categoryName
         ? [row.parentName, row.categoryName].filter(Boolean).join(' / ')
         : null,
@@ -242,9 +251,15 @@ export class DrizzleProductRepository extends ProductRepository {
   private listQuery(where: SQL | undefined, filters: ProductFilters) {
     const direction = filters.sortDirection === 'desc' ? desc : asc;
     return this.database.db
-      .select({ product: products, categoryName: categories.name, incomingQty: incomingQtySql })
+      .select({
+        product: products,
+        categoryName: categories.name,
+        costCenterName: costCenters.name,
+        incomingQty: incomingQtySql,
+      })
       .from(products)
       .leftJoin(categories, eq(categories.id, products.categoryId))
+      .leftJoin(costCenters, eq(costCenters.id, products.costCenterId))
       .where(where)
       .orderBy(direction(SORT_COLUMNS[filters.sortBy]), asc(products.id))
       .$dynamic();
@@ -269,6 +284,13 @@ export class DrizzleProductRepository extends ProductRepository {
       );
     }
     if (filters.unit) conditions.push(eq(products.unit, filters.unit));
+    if (filters.costCenterId) conditions.push(eq(products.costCenterId, filters.costCenterId));
+    if (filters.isConsignment !== undefined) {
+      conditions.push(eq(products.isConsignment, filters.isConsignment));
+    }
+    if (filters.hasPrice !== undefined) {
+      conditions.push(filters.hasPrice ? isNotNull(products.priceUsd) : isNull(products.priceUsd));
+    }
     if (filters.isActive !== undefined) conditions.push(eq(products.isActive, filters.isActive));
     if (filters.isInternalCode !== undefined) {
       conditions.push(eq(products.isInternalCode, filters.isInternalCode));

@@ -2,23 +2,25 @@ import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { errorMessage } from '../../../core/http/api-utils';
-import type { Category } from '../../../shared/models/models';
+import type { Category, CostCenter } from '../../../shared/models/models';
 import { DialogFrameComponent } from '../../../shared/ui/dialog-frame.component';
 import { FieldComponent } from '../../../shared/ui/layout.components';
 import { ToastService } from '../../../shared/ui/toast.service';
 import { buildCategoryOptions, type CategoryOption } from '../category-options';
 import { ProductsApi, type BulkChanges } from '../products.api';
 
-export type BulkAction = 'category' | 'stockLevels' | 'activation';
+export type BulkAction = 'category' | 'costCenter' | 'stockLevels' | 'activation';
 
 export interface BulkDialogData {
   action: BulkAction;
   ids: number[];
   categories: Category[];
+  costCenters: CostCenter[];
 }
 
 const TITLES: Record<BulkAction, string> = {
   category: 'Asignar categoría',
+  costCenter: 'Asignar centro de costo',
   stockLevels: 'Definir stock mínimo / reposición',
   activation: 'Activar / desactivar',
 };
@@ -46,6 +48,16 @@ export function openBulkDialog(dialog: Dialog, data: BulkDialogData) {
                 <option [ngValue]="null">— Sin categoría —</option>
                 @for (option of categoryOptions; track option.id) {
                   <option [ngValue]="option.id">{{ indent(option) }}{{ option.label }}</option>
+                }
+              </select>
+            </ui-field>
+          }
+          @case ('costCenter') {
+            <ui-field label="Centro de costo" for="bulk-cost-center" [required]="true">
+              <select id="bulk-cost-center" class="input" formControlName="costCenterId">
+                <option [ngValue]="null">— Sin centro de costo —</option>
+                @for (center of data.costCenters; track center.id) {
+                  <option [ngValue]="center.id">{{ center.name }}</option>
                 }
               </select>
             </ui-field>
@@ -120,6 +132,7 @@ export class BulkActionDialog {
 
   protected readonly form = this.fb.group({
     categoryId: [null as number | null],
+    costCenterId: [null as number | null],
     minStock: [null as number | null, [Validators.min(0)]],
     reorderQuantity: [null as number | null, [Validators.min(0)]],
     isActive: [true],
@@ -134,6 +147,8 @@ export class BulkActionDialog {
     switch (this.data.action) {
       case 'category':
         return { categoryId: value.categoryId ?? null };
+      case 'costCenter':
+        return { costCenterId: value.costCenterId ?? null };
       case 'stockLevels': {
         const changes: BulkChanges = {};
         if (value.minStock !== null && value.minStock !== undefined)

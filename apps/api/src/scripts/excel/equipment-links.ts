@@ -2,15 +2,22 @@ import { searchable } from './classifier.js';
 
 export interface EquipmentSeed {
   name: string;
+  legacyNames?: string[];
   description: string;
   pattern: RegExp;
 }
 
 export const EQUIPMENT_SEEDS: EquipmentSeed[] = [
   {
-    name: 'Perforadora frontal WD561',
-    description: 'Equipo de perforación frontal',
-    pattern: /wd\s?561/,
+    name: 'Jumbo DK0138',
+    legacyNames: ['Perforadora frontal WD561'],
+    description: 'Jumbo de perforación frontal (WD561)',
+    pattern: /wd\s?561|dk\s?0?138/,
+  },
+  {
+    name: 'Motor Yuchai',
+    description: 'Motor diésel Yuchai del Jumbo',
+    pattern: /yuchai/,
   },
   {
     name: 'Minidumper WY1000',

@@ -54,27 +54,63 @@ export interface Product {
   isInternalCode: boolean;
   name: string;
   description: string | null;
+  specification: string | null;
   categoryId: number | null;
+  costCenterId: number | null;
   unit: UnitOfMeasure;
   stock: number;
   minStock: number;
   reorderQuantity: number;
   location: string | null;
   costUsd: number | null;
+  /** Sale price in USD without IGV. */
   priceUsd: number | null;
+  wholesalePriceUsd: number | null;
+  wholesaleMinQty: number | null;
+  isConsignment: boolean;
   notes: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface PriceBreakdown {
+  priceUsd: number;
+  igvUsd: number;
+  priceWithIgvUsd: number;
+  priceWithIgvPen: number;
+}
+
+export interface ProductPricing {
+  retail: PriceBreakdown | null;
+  wholesale: (PriceBreakdown & { minQty: number | null }) | null;
+  marginPercent: number | null;
+}
+
+export interface PricingSettings {
+  exchangeRate: number;
+  igvRate: number;
+}
+
+export interface CostCenter {
+  id: number;
+  name: string;
+  productCount: number;
+}
+
 export interface ProductListItem extends Product {
   categoryName: string | null;
+  costCenterName: string | null;
   stockStatus: StockStatus;
   incomingQty: number;
 }
 
-export interface ProductDetail extends ProductListItem {
+/** Product list/detail responses include the computed price breakdown. */
+export interface PricedProduct extends ProductListItem {
+  pricing: ProductPricing;
+}
+
+export interface ProductDetail extends PricedProduct {
   categoryPath: string | null;
   equipment: EquipmentModel[];
 }
@@ -198,6 +234,9 @@ export interface DashboardSummary {
     activeProducts: number;
     totalUnits: number;
     inventoryValueUsd: number;
+    inventoryValueAtPriceUsd: number;
+    withoutPrice: number;
+    consignmentUnits: number;
     outOfStock: number;
     lowStock: number;
     unconfiguredMinStock: number;

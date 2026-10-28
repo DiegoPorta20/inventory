@@ -27,6 +27,9 @@ Source of truth: `docs/domain-analysis.md`. Summary of the invariants the code m
 8. Completing a count: each line with `countedQty != null` whose `countedQty` differs from the product's **current** stock generates `ADJUSTMENT / COUNT_ADJUSTMENT` of `countedQty - currentStock` (current, not frozen, so movements made during the count are not lost). The note records the frozen `systemQty`.
 9. Products with movements cannot be deleted, only deactivated.
 10. Codes are unique case-insensitively; normalize with `normalizeProductCode` (trim, remove inner whitespace, uppercase).
+11. Pricing: `products.priceUsd` is the sale price in USD **without IGV**. IGV rate and USD→PEN exchange rate live in `settings` (defaults 18 % and 3.6). Derived prices (`pricing.retail/wholesale`) are computed by `modules/settings/domain/pricing.ts` and returned by the products API; never store derived prices.
+12. Wholesale price applies from `wholesaleMinQty`. Margin = (price − cost) / price, null when either is unknown.
+13. `isConsignment` is true only for products found exclusively in consignment sections of the price list. Cost centers (`cost_centers`) are business lines, independent from categories.
 
 ## When adding behavior
 

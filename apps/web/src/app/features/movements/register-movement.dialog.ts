@@ -12,6 +12,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { map, startWith } from 'rxjs';
 import { errorMessage } from '../../core/http/api-utils';
+import { PricingService } from '../../core/pricing/pricing.service';
 import {
   MANUAL_REASONS,
   MOVEMENT_REASON_LABELS,
@@ -19,14 +20,15 @@ import {
   UNIT_LABELS,
 } from '../../shared/models/labels';
 import type { MovementType, ProductListItem, UnitOfMeasure } from '../../shared/models/models';
-import { FORMAT_PIPES } from '../../shared/pipes/format.pipes';
+import { FORMAT_PIPES, formatPen } from '../../shared/pipes/format.pipes';
 import { DialogFrameComponent } from '../../shared/ui/dialog-frame.component';
 import { FieldComponent } from '../../shared/ui/layout.components';
 import { ProductPickerComponent } from '../../shared/ui/product-picker.component';
 import { ToastService } from '../../shared/ui/toast.service';
 
 export interface RegisterMovementData {
-  product?: Pick<ProductListItem, 'id' | 'code' | 'name' | 'stock' | 'unit'>;
+  product?: Pick<ProductListItem, 'id' | 'code' | 'name' | 'stock' | 'unit'> &
+    Partial<Pick<ProductListItem, 'priceUsd'>>;
   type?: MovementType;
 }
 
@@ -160,7 +162,7 @@ export function openRegisterMovement(dialog: Dialog, data: RegisterMovementData 
                 formControlName="counterparty"
                 maxlength="160"
             /></ui-field>
-            <ui-field label="Precio unitario (USD)" for="movement-price"
+            <ui-field label="Precio unitario (USD)" for="movement-price" [hint]="priceHint()"
               ><input
                 id="movement-price"
                 class="input"
@@ -215,6 +217,7 @@ export class RegisterMovementDialog {
   protected readonly ref = inject<DialogRef<boolean>>(DialogRef);
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
+  private readonly pricing = inject(PricingService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly types = TYPES;
@@ -245,8 +248,25 @@ export class RegisterMovementDialog {
     this.form.controls.quantity.valueChanges.pipe(startWith(this.form.controls.quantity.value)),
     { requireSync: true },
   );
+  private readonly reason = toSignal(
+    this.form.controls.reason.valueChanges.pipe(startWith(this.form.controls.reason.value)),
+    { requireSync: true },
+  );
+  private readonly unitPrice = toSignal(
+    this.form.controls.unitPriceUsd.valueChanges.pipe(
+      startWith(this.form.controls.unitPriceUsd.value),
+    ),
+    { requireSync: true },
+  );
 
   protected readonly reasons = computed(() => MANUAL_REASONS[this.type()]);
+
+  protected readonly priceHint = computed<string | undefined>(() => {
+    const price = Number(this.unitPrice());
+    if (!this.unitPrice() || !Number.isFinite(price) || price <= 0) return undefined;
+    const breakdown = this.pricing.breakdown(price);
+    return `Equivale a ${formatPen(breakdown.priceWithIgvPen)} con IGV.`;
+  });
 
   protected readonly resultingStock = computed(() => {
     const product = this.product();
@@ -271,6 +291,15 @@ export class RegisterMovementDialog {
       const allowed = this.reasons();
       if (!allowed.includes(this.form.controls.reason.value as never)) {
         this.form.controls.reason.setValue(allowed[0]);
+      }
+    });
+
+    effect(() => {
+      const control = this.form.controls.unitPriceUsd;
+      const price = this.product()?.priceUsd ?? null;
+      const isSale = this.type() === 'OUT' && this.reason() === 'SALE';
+      if (isSale && price != null && !control.dirty && control.value == null) {
+        control.setValue(price);
       }
     });
   }

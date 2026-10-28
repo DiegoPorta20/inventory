@@ -6,7 +6,7 @@ El análisis del Excel de inventario que originó el diseño está en [`docs/dom
 
 ## Módulos
 
-Panel · Productos (filtros, detalle, edición en lote, exportación Excel) · Categorías · Movimientos (libro de stock) · Conteos físicos · Reposición (qué pedir y cuánto) · Importaciones (pedido → tránsito → recepción) · Proveedores · Equipos compatibles · Usuarios.
+Panel · Productos (filtros, detalle, precios con IGV y soles, precio por mayor, edición en lote, exportación Excel y lista de precios) · Categorías · Centros de costo · Movimientos (libro de stock) · Conteos físicos · Reposición (qué pedir y cuánto) · Importaciones (pedido → tránsito → recepción) · Proveedores · Equipos compatibles · Usuarios · Configuración (tipo de cambio e IGV).
 
 ## Requisitos
 
@@ -21,12 +21,15 @@ pnpm db:up                    # MySQL 8.4 en Docker
 pnpm db:migrate               # crea las tablas
 pnpm db:seed                  # admin inicial + categorías + equipos
 pnpm db:import-excel          # opcional: carga data/inventory.xlsx
+pnpm db:import-prices         # opcional: aplica data/Precios*.xlsx (precios, centros de costo, consignación)
 pnpm dev                      # API http://localhost:3000 + web http://localhost:4200
 ```
 
 Usuario inicial: el definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (`.env`). Cámbiala desde *Mi cuenta*.
 
-`pnpm db:import-excel [archivo] [--reset] [--dry-run] [--min-stock=N] [--snapshot=YYYY-MM-DD]` clasifica productos, consolida códigos repetidos y crea importaciones y movimientos. Los Excel están en `.gitignore`: nunca se versionan.
+`pnpm db:import-excel [archivo] [--reset] [--dry-run] [--min-stock=N] [--snapshot=YYYY-MM-DD]` clasifica productos, consolida códigos repetidos y crea importaciones y movimientos. `pnpm db:import-prices [archivo] [--dry-run] [--create-missing]` actualiza precios y datos comerciales de los productos existentes. Los Excel están en `.gitignore`: nunca se versionan.
+
+**Precios**: el precio base es USD sin IGV; el IGV (18 %) y el tipo de cambio (3.6) se configuran en *Configuración* y de ahí salen el precio en USD con IGV y en soles.
 
 ## Producción (monolito)
 

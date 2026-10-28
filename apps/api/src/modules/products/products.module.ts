@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 import { CategoriesModule } from '../categories/categories.module.js';
+import { CostCentersModule } from '../cost-centers/cost-centers.module.js';
 import { EquipmentModule } from '../equipment/equipment.module.js';
+import { SettingsModule } from '../settings/settings.module.js';
 import { ProductRepository } from './application/ports/product.repository.js';
 import { ProductReferences } from './application/product-references.js';
 import { BulkUpdateProducts } from './application/use-cases/bulk-update-products.js';
 import { CreateProduct } from './application/use-cases/create-product.js';
 import { DeleteProduct } from './application/use-cases/delete-product.js';
 import {
+  ExportPriceList,
   ExportProducts,
   GetProduct,
   SearchProducts,
@@ -16,13 +19,14 @@ import { DrizzleProductRepository } from './infrastructure/drizzle-product.repos
 import { ProductsController } from './presentation/products.controller.js';
 
 @Module({
-  imports: [CategoriesModule, EquipmentModule],
+  imports: [CategoriesModule, EquipmentModule, CostCentersModule, SettingsModule],
   controllers: [ProductsController],
   providers: [
     ProductReferences,
     SearchProducts,
     GetProduct,
     ExportProducts,
+    ExportPriceList,
     CreateProduct,
     UpdateProduct,
     DeleteProduct,

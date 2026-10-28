@@ -32,6 +32,11 @@ export const routes: Routes = [
           import('./features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES),
       },
       {
+        path: 'cost-centers',
+        loadChildren: () =>
+          import('./features/cost-centers/cost-centers.routes').then((m) => m.COST_CENTERS_ROUTES),
+      },
+      {
         path: 'movements',
         loadChildren: () =>
           import('./features/movements/movements.routes').then((m) => m.MOVEMENTS_ROUTES),
@@ -63,6 +68,11 @@ export const routes: Routes = [
       {
         path: 'users',
         loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
+      },
+      {
+        path: 'settings',
+        loadChildren: () =>
+          import('./features/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
       {
         path: 'account',

@@ -25,6 +25,9 @@ export const formatQuantity = (value: number | null | undefined): string =>
 export const formatUsd = (value: number | null | undefined, precise = false): string =>
   value == null ? '—' : `$ ${(precise ? decimal4 : decimal2).format(value)}`;
 
+export const formatPen = (value: number | null | undefined): string =>
+  value == null ? '—' : `S/ ${decimal2.format(value)}`;
+
 export function formatDateTime(value: string | Date | null | undefined): string {
   return value ? dateTime.format(new Date(value)) : '—';
 }
@@ -60,6 +63,13 @@ export class UsdPipe implements PipeTransform {
   }
 }
 
+@Pipe({ name: 'pen' })
+export class PenPipe implements PipeTransform {
+  transform(value: number | null | undefined): string {
+    return formatPen(value);
+  }
+}
+
 @Pipe({ name: 'dateTime' })
 export class DateTimePipe implements PipeTransform {
   transform(value: string | Date | null | undefined): string {
@@ -78,6 +88,7 @@ export const FORMAT_PIPES = [
   QuantityPipe,
   SignedQuantityPipe,
   UsdPipe,
+  PenPipe,
   DateTimePipe,
   DateOnlyPipe,
 ] as const;

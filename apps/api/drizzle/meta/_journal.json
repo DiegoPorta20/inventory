@@ -8,6 +8,13 @@
       "when": 1793198741986,
       "tag": "0000_magical_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1793210247457,
+      "tag": "0001_modern_zodiak",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import type { Product, ProductListItem, UnitOfMeasure } from '../../domain/produ
 
 export type StockStatusFilter = 'OUT' | 'LOW' | 'OK' | 'UNCONFIGURED';
 
-export type ProductSortField = 'code' | 'name' | 'stock' | 'updatedAt' | 'cost';
+export type ProductSortField = 'code' | 'name' | 'stock' | 'updatedAt' | 'cost' | 'price';
 
 export interface ProductFilters {
   search?: string;
@@ -16,6 +16,9 @@ export interface ProductFilters {
   isActive?: boolean;
   isInternalCode?: boolean;
   needsReorder?: boolean;
+  costCenterId?: number;
+  isConsignment?: boolean;
+  hasPrice?: boolean;
   sortBy: ProductSortField;
   sortDirection: 'asc' | 'desc';
 }
@@ -25,13 +28,18 @@ export interface ProductDraft {
   isInternalCode: boolean;
   name: string;
   description: string | null;
+  specification: string | null;
   categoryId: number | null;
+  costCenterId: number | null;
   unit: UnitOfMeasure;
   minStock: number;
   reorderQuantity: number;
   location: string | null;
   costUsd: number | null;
   priceUsd: number | null;
+  wholesalePriceUsd: number | null;
+  wholesaleMinQty: number | null;
+  isConsignment: boolean;
   notes: string | null;
   isActive: boolean;
 }
@@ -45,6 +53,7 @@ export interface ProductDetail extends ProductListItem {
 
 export interface BulkProductChanges {
   categoryId?: number | null;
+  costCenterId?: number | null;
   minStock?: number;
   reorderQuantity?: number;
   isActive?: boolean;

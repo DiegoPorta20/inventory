@@ -156,6 +156,50 @@ describe('Inventory API (e2e)', () => {
     await api.post(`/api/stock-counts/${count.body.id}/complete`).expect(422);
   });
 
+  it('prices products with IGV and exchange rate, and recalculates when settings change', async () => {
+    const costCenter = await api
+      .post('/api/cost-centers')
+      .send({ name: 'Repuesto Jumbo' })
+      .expect(201);
+    await api
+      .patch(`/api/products/${productId}`)
+      .send({
+        priceUsd: 100,
+        costUsd: 60,
+        costCenterId: costCenter.body.id,
+        specification: 'M12',
+        wholesalePriceUsd: 90,
+        wholesaleMinQty: 10,
+      })
+      .expect(200);
+
+    const detail = await api.get(`/api/products/${productId}`).expect(200);
+    expect(detail.body.costCenterName).toBe('Repuesto Jumbo');
+    expect(detail.body.pricing.retail).toMatchObject({
+      priceUsd: 100,
+      igvUsd: 18,
+      priceWithIgvPen: 424.8,
+    });
+    expect(detail.body.pricing.wholesale.minQty).toBe(10);
+    expect(detail.body.pricing.marginPercent).toBe(40);
+
+    await api.get('/api/settings/pricing').expect(200, { exchangeRate: 3.6, igvRate: 0.18 });
+    await api.put('/api/settings/pricing').send({ exchangeRate: 4 }).expect(200);
+    const repriced = await api.get(`/api/products/${productId}`).expect(200);
+    expect(repriced.body.pricing.retail.priceWithIgvPen).toBe(472);
+    await api.put('/api/settings/pricing').send({ exchangeRate: 3.6 }).expect(200);
+
+    const priced = await api
+      .get(`/api/products?hasPrice=true&costCenterId=${costCenter.body.id}`)
+      .expect(200);
+    expect(priced.body.items.map((item: { id: number }) => item.id)).toEqual([productId]);
+    await api.put('/api/settings/pricing').send({ exchangeRate: -1 }).expect(400);
+
+    const list = await api.get('/api/products/price-list/export').buffer(true).expect(200);
+    expect(list.headers['content-type']).toContain('spreadsheetml');
+    await api.delete(`/api/cost-centers/${costCenter.body.id}`).expect(422);
+  });
+
   it('prevents deleting products with history', async () => {
     const response = await api.delete(`/api/products/${productId}`).expect(422);
     expect(response.body.code).toBe('PRODUCT_HAS_HISTORY');

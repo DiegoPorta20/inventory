@@ -30,6 +30,7 @@ const MESSAGES: Record<string, string> = {
   CATEGORY_IN_USE: 'La categoría tiene productos o subcategorías.',
   CATEGORY_DEPTH_EXCEEDED: 'Solo se permiten dos niveles de categorías.',
   SUPPLIER_IN_USE: 'El proveedor tiene importaciones; desactívalo en lugar de eliminarlo.',
+  COST_CENTER_IN_USE: 'El centro de costo tiene productos; reasígnalos antes de eliminarlo.',
   IMPORT_NOT_EDITABLE: 'La importación ya no se puede modificar.',
   IMPORT_NOT_RECEIVABLE: 'La importación no se puede recibir en su estado actual.',
   INVALID_IMPORT_TRANSITION: 'No se puede cambiar la importación a ese estado.',

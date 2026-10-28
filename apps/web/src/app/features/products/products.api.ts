@@ -4,29 +4,33 @@ import type { Observable } from 'rxjs';
 import { toHttpParams } from '../../core/http/api-utils';
 import type {
   Category,
+  CostCenter,
   EquipmentModel,
   ImportOrderSummary,
   Page,
+  PricedProduct,
   Product,
   ProductDetail,
-  ProductListItem,
   StockMovement,
   StockStatusFilter,
   UnitOfMeasure,
 } from '../../shared/models/models';
 
-export type ProductSortBy = 'code' | 'name' | 'stock' | 'updatedAt' | 'cost';
+export type ProductSortBy = 'code' | 'name' | 'stock' | 'updatedAt' | 'cost' | 'price';
 export type SortDirection = 'asc' | 'desc';
 
 export interface ProductListFilters {
   search?: string;
   categoryId?: number;
+  costCenterId?: number;
   unit?: UnitOfMeasure;
   stockStatus?: StockStatusFilter;
   importOrderId?: number;
   equipmentId?: number;
   isActive?: boolean;
   isInternalCode?: boolean;
+  isConsignment?: boolean;
+  hasPrice?: boolean;
   sortBy?: ProductSortBy;
   sortDirection?: SortDirection;
   page?: number;
@@ -37,13 +41,18 @@ export interface ProductInput {
   code?: string;
   name: string;
   description: string | null;
+  specification: string | null;
   categoryId: number | null;
+  costCenterId: number | null;
   unit: UnitOfMeasure;
   minStock: number;
   reorderQuantity: number;
   location: string | null;
   costUsd: number | null;
   priceUsd: number | null;
+  wholesalePriceUsd: number | null;
+  wholesaleMinQty: number | null;
+  isConsignment: boolean;
   notes: string | null;
   isActive: boolean;
   equipmentIds: number[];
@@ -51,6 +60,7 @@ export interface ProductInput {
 
 export interface BulkChanges {
   categoryId?: number | null;
+  costCenterId?: number | null;
   minStock?: number;
   reorderQuantity?: number;
   isActive?: boolean;
@@ -61,8 +71,8 @@ export class ProductsApi {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/products';
 
-  list(filters: ProductListFilters): Observable<Page<ProductListItem>> {
-    return this.http.get<Page<ProductListItem>>(this.base, {
+  list(filters: ProductListFilters): Observable<Page<PricedProduct>> {
+    return this.http.get<Page<PricedProduct>>(this.base, {
       params: toHttpParams({ ...filters }),
     });
   }
@@ -94,8 +104,19 @@ export class ProductsApi {
     });
   }
 
+  exportPriceList(filters: Omit<ProductListFilters, 'page' | 'pageSize'>): Observable<Blob> {
+    return this.http.get(`${this.base}/price-list/export`, {
+      params: toHttpParams({ ...filters }),
+      responseType: 'blob',
+    });
+  }
+
   listCategories(): Observable<Category[]> {
     return this.http.get<Category[]>('/api/categories');
+  }
+
+  listCostCenters(): Observable<CostCenter[]> {
+    return this.http.get<CostCenter[]>('/api/cost-centers');
   }
 
   listEquipment(): Observable<EquipmentModel[]> {

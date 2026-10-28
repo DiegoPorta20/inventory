@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { STOCK_STATUS_LABELS, UNIT_LABELS } from '../../../shared/models/labels';
 import type {
   Category,
+  CostCenter,
   EquipmentModel,
   ImportOrderSummary,
   StockStatusFilter,
@@ -14,12 +15,15 @@ import { buildCategoryOptions, type CategoryOption } from '../category-options';
 export interface ProductFilterValues {
   search: string;
   categoryId: number;
+  costCenterId: number;
   unit: string;
   stockStatus: string;
   equipmentId: number;
   importOrderId: number;
   active: string;
   internalCode: string;
+  hasPrice: string;
+  consignment: string;
 }
 
 interface Chip {
@@ -55,6 +59,18 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
           <option value="">Todas las categorías</option>
           @for (option of categoryOptions(); track option.id) {
             <option [value]="option.id">{{ indent(option) }}{{ option.label }}</option>
+          }
+        </select>
+
+        <select
+          class="input"
+          aria-label="Centro de costo"
+          [value]="asString(values().costCenterId)"
+          (change)="patchNum('costCenterId', $any($event.target).value)"
+        >
+          <option value="">Todos los centros de costo</option>
+          @for (center of costCenters(); track center.id) {
+            <option [value]="center.id">{{ center.name }}</option>
           }
         </select>
 
@@ -127,6 +143,27 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
           <option value="true">Código interno</option>
           <option value="false">Código de proveedor</option>
         </select>
+
+        <select
+          class="input"
+          aria-label="Precio"
+          [value]="values().hasPrice"
+          (change)="patch({ hasPrice: $any($event.target).value })"
+        >
+          <option value="">Precio: todos</option>
+          <option value="true">Con precio</option>
+          <option value="false">Sin precio</option>
+        </select>
+
+        <select
+          class="input"
+          aria-label="Consignación"
+          [value]="values().consignment"
+          (change)="patch({ consignment: $any($event.target).value })"
+        >
+          <option value="">Consignación: todos</option>
+          <option value="true">Solo consignación</option>
+        </select>
       </div>
 
       @if (chips().length > 0) {
@@ -155,6 +192,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
 export class ProductFiltersComponent {
   readonly values = input.required<ProductFilterValues>();
   readonly categories = input<Category[]>([]);
+  readonly costCenters = input<CostCenter[]>([]);
   readonly equipment = input<EquipmentModel[]>([]);
   readonly imports = input<ImportOrderSummary[]>([]);
 
@@ -175,6 +213,10 @@ export class ProductFiltersComponent {
       const name = this.categories().find((c) => c.id === v.categoryId)?.name;
       if (name) chips.push({ key: 'categoryId', label: name });
     }
+    if (v.costCenterId) {
+      const name = this.costCenters().find((c) => c.id === v.costCenterId)?.name;
+      if (name) chips.push({ key: 'costCenterId', label: name });
+    }
     if (v.unit) chips.push({ key: 'unit', label: this.unitLabels[v.unit as UnitOfMeasure] });
     if (v.stockStatus)
       chips.push({
@@ -194,6 +236,9 @@ export class ProductFiltersComponent {
     if (v.internalCode === 'true') chips.push({ key: 'internalCode', label: 'Código interno' });
     else if (v.internalCode === 'false')
       chips.push({ key: 'internalCode', label: 'Código de proveedor' });
+    if (v.hasPrice === 'true') chips.push({ key: 'hasPrice', label: 'Con precio' });
+    else if (v.hasPrice === 'false') chips.push({ key: 'hasPrice', label: 'Sin precio' });
+    if (v.consignment === 'true') chips.push({ key: 'consignment', label: 'Solo consignación' });
     return chips;
   });
 
@@ -209,7 +254,10 @@ export class ProductFiltersComponent {
     this.filterChange.emit(change);
   }
 
-  protected patchNum(key: 'categoryId' | 'equipmentId' | 'importOrderId', raw: string): void {
+  protected patchNum(
+    key: 'categoryId' | 'costCenterId' | 'equipmentId' | 'importOrderId',
+    raw: string,
+  ): void {
     this.filterChange.emit({ [key]: raw ? Number(raw) : 0 } as Partial<ProductFilterValues>);
   }
 
@@ -217,7 +265,10 @@ export class ProductFiltersComponent {
     const reset: Partial<ProductFilterValues> =
       key === 'active'
         ? { active: 'active' }
-        : key === 'categoryId' || key === 'equipmentId' || key === 'importOrderId'
+        : key === 'categoryId' ||
+            key === 'costCenterId' ||
+            key === 'equipmentId' ||
+            key === 'importOrderId'
           ? ({ [key]: 0 } as Partial<ProductFilterValues>)
           : ({ [key]: '' } as Partial<ProductFilterValues>);
     this.filterChange.emit(reset);

@@ -18,6 +18,7 @@ import { BulkUpdateProducts } from '../application/use-cases/bulk-update-product
 import { CreateProduct } from '../application/use-cases/create-product.js';
 import { DeleteProduct } from '../application/use-cases/delete-product.js';
 import {
+  ExportPriceList,
   ExportProducts,
   GetProduct,
   SearchProducts,
@@ -46,6 +47,7 @@ export class ProductsController {
     private readonly deleteProduct: DeleteProduct,
     private readonly bulkUpdateProducts: BulkUpdateProducts,
     private readonly exportProducts: ExportProducts,
+    private readonly exportPriceList: ExportPriceList,
   ) {}
 
   @Get()
@@ -59,6 +61,13 @@ export class ProductsController {
   @Header('Content-Disposition', 'attachment; filename="inventario.xlsx"')
   async export(@Query(new ZodValidationPipe(exportProductsSchema)) query: ExportProductsQuery) {
     return new StreamableFile(await this.exportProducts.execute(query));
+  }
+
+  @Get('price-list/export')
+  @Header('Content-Type', XLSX_CONTENT_TYPE)
+  @Header('Content-Disposition', 'attachment; filename="lista-de-precios.xlsx"')
+  async priceList(@Query(new ZodValidationPipe(exportProductsSchema)) query: ExportProductsQuery) {
+    return new StreamableFile(await this.exportPriceList.execute(query));
   }
 
   @Patch('bulk')

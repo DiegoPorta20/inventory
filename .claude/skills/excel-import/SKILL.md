@@ -1,37 +1,46 @@
 ---
 name: excel-import
-description: How the Excel inventory importer works (parsing, code normalization, de-duplication, category classification, import batches, sales) and how to extend its rules. Use when changing apps/api/src/scripts/import-excel.ts or classifier rules.
+description: How the Excel importers work (inventory snapshot and sale price list: parsing, code normalization, de-duplication, classification, matching, pricing) and how to extend their rules. Use when changing apps/api/src/scripts/import-*.ts or anything under scripts/excel.
 ---
 
-# Excel importer
+# Excel importers
 
-Run: `pnpm db:import-excel [path] [--reset] [--min-stock=N] [--dry-run]` (default path `data/inventory.xlsx`).
+Two scripts, run in this order (files live in `data/`, git-ignored):
+
+1. `pnpm db:import-excel [path] [--reset] [--min-stock=N] [--dry-run]` – inventory snapshot (`data/inventory.xlsx`): products, import batches, stock movements.
+2. `pnpm db:import-prices [path] [--dry-run] [--create-missing]` – sale price list (`data/Precios*.xlsx`, sheet `APU`): prices, specification, cost center, consignment, wholesale, equipment links. It updates existing products matched by code (tolerating O/D typos for zero) or by unique name; it never touches stock. `--create-missing` only creates unmatched rows that have a price.
 
 Files (`apps/api/src/scripts/excel/`):
-- `inventory-sheet.reader.ts` – reads sheet `INVENTARIO 30.09` rows into `RawRow[]` (handles formula cells via `.result`).
+- `inventory-sheet.reader.ts` / `price-sheet.reader.ts` – locate columns by header text (robust to shifts), read formula/rich-text cells.
 - `normalize.ts` – code/description/unit normalization (pure, tested).
-- `classifier.ts` – ordered keyword rules → category slug (pure, tested).
-- `equipment-links.ts` – detects equipment tokens (`WD561`, `WY800`, `WY1000`, `U1528`) in descriptions.
-- `plan-import.ts` – turns raw rows into an `ImportPlan` (products, imports, movements). Pure and tested.
-- `../import-excel.ts` – applies the plan to MySQL in one transaction.
+- `classifier.ts` – ordered keyword rules → category slug (pure, tested). `taxonomy.ts` – category tree.
+- `equipment-links.ts` – equipment seeds and token detection (`WD561/DK0138`, `WY800`, `WY1000`, `U1528`, `Yuchai`).
+- `plan-import.ts`, `plan-prices.ts` – pure planners that turn raw rows into a plan; tested without a database.
+- `../import-excel.ts`, `../import-prices.ts` – apply the plan to MySQL in one transaction.
 
-## Sheet columns (row 3 header, data from row 4)
+## Inventory sheet (header row 3, data from row 4)
 
 B ITEM · C #IMP · D CODE · E DESCRIPTION · F UNIT · G RECEIVED · H SOLD · I THEORETICAL STOCK (formula) · J PHYSICAL · K DIFF · L NOTES.
 
-## Rules
-
-- Code: remove all whitespace, uppercase. Empty → `INT-0001…` (sequential, `isInternalCode = true`).
+- Code: remove all whitespace, uppercase. Empty → `INT-0001…` (`isInternalCode = true`); identical names without code share one internal code.
 - Same code in several rows → one product; stock = Σreceived − Σsold; each row becomes an import line.
-- Description: trim, collapse whitespace; ALL-CAPS descriptions → sentence case. Keep Spanish text as is.
-- Unit: `unid.`→`UNIT`, `pcs`→`PCS`, `set`→`SET`, missing→`UNIT`.
-- Imports: one `RECEIVED` import per `#IMP` number, `receivedAt` = snapshot date (2026-09-30), note "Migrated from Excel".
-- Sold quantity → single `OUT / SALE` movement per product, note "Historical sales until snapshot (Excel)".
-- Classification: first matching rule wins; fallback category `uncategorized`. Print an "unclassified" report so rules can be improved.
-- Idempotency: aborts if products exist unless `--reset`, which clears inventory tables (not users).
+- Description: trim, collapse whitespace; ALL-CAPS → sentence case. Unit: `unid.`→`UNIT`, `pcs`→`PCS`, `set`→`SET`.
+- One `RECEIVED` import per `#IMP`, `receivedAt` = snapshot date (2026-09-30); sold quantity → one `OUT / SALE` movement per product.
+- Classification: first matching rule wins, fallback `uncategorized`; the script prints the unclassified list.
+- Idempotency: aborts if products exist unless `--reset` (clears inventory tables, not users).
+
+## Price sheet (`APU`, header row 3)
+
+D CODE · C DESCRIPTION · E SPECIFICATION · F COST CENTER · K PRICE USD WITHOUT IGV · N PRICE S/ WITH IGV (rate in N4) · wholesale block (`PRECIO USD X unidad`, `CANTIDAD POR MES`).
+
+- Section rows (no data) set the context: `Jumbo` → equipment *Jumbo DK0138*, `Yuchai` → also *Motor Yuchai*, `Consignación` → consignment flag.
+- Several rows with the same code → quantity-weighted average price. Wholesale USD has IGV in the file; it is stored without IGV.
+- Specification cleanup removes Chinese text and placeholders (`Repuesto`, `/`).
+- Cost center names are normalized (`repuesto Jumbo` → `Repuesto Jumbo`).
+- Stock columns of the price list are ignored on purpose.
 
 ## Extending
 
-1. Add/adjust a rule in `classifier.ts` (keep rules ordered from most specific to most generic; match on accent-stripped lowercase).
-2. Add a test case in `classifier.spec.ts` with the real description that failed.
-3. Never commit the real spreadsheet; use tiny synthetic fixtures under `test/fixtures`.
+1. Add/adjust a rule in `classifier.ts` (most specific first; match on accent-stripped lowercase).
+2. Add a test with the real description that failed (`import.spec.ts`, `plan-prices.spec.ts`).
+3. Never commit the real spreadsheets; use tiny synthetic fixtures.

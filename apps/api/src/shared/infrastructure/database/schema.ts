@@ -92,6 +92,23 @@ export const equipmentModels = mysqlTable(
   (t) => [uniqueIndex('equipment_models_name_uq').on(t.name)],
 );
 
+export const costCenters = mysqlTable(
+  'cost_centers',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    name: varchar('name', { length: 120 }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('cost_centers_name_uq').on(t.name)],
+);
+
+export const settings = mysqlTable('settings', {
+  key: varchar('key', { length: 60 }).primaryKey(),
+  value: varchar('value', { length: 255 }).notNull(),
+  updatedAt: updatedAt(),
+});
+
 export const products = mysqlTable(
   'products',
   {
@@ -100,7 +117,9 @@ export const products = mysqlTable(
     isInternalCode: boolean('is_internal_code').notNull().default(false),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    specification: varchar('specification', { length: 500 }),
     categoryId: int('category_id').references(() => categories.id, { onDelete: 'restrict' }),
+    costCenterId: int('cost_center_id').references(() => costCenters.id, { onDelete: 'set null' }),
     unit: varchar('unit', { length: 10 }).notNull().default('PCS'),
     stock: int('stock').notNull().default(0),
     minStock: int('min_stock').notNull().default(0),
@@ -108,6 +127,9 @@ export const products = mysqlTable(
     location: varchar('location', { length: 60 }),
     costUsd: money('cost_usd'),
     priceUsd: money('price_usd'),
+    wholesalePriceUsd: money('wholesale_price_usd'),
+    wholesaleMinQty: int('wholesale_min_qty'),
+    isConsignment: boolean('is_consignment').notNull().default(false),
     notes: text('notes'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: createdAt(),
@@ -117,6 +139,7 @@ export const products = mysqlTable(
     uniqueIndex('products_code_uq').on(t.code),
     index('products_name_idx').on(t.name),
     index('products_category_idx').on(t.categoryId),
+    index('products_cost_center_idx').on(t.costCenterId),
     index('products_stock_idx').on(t.stock),
   ],
 );

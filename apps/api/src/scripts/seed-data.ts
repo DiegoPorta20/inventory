@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Env } from '../config/env.js';
 import { Role } from '../shared/domain/auth.js';
 import type { Database } from '../shared/infrastructure/database/database.service.js';
@@ -43,6 +43,21 @@ export async function ensureEquipment(db: Database): Promise<Map<string, number>
       .limit(1);
     if (existing) {
       ids.set(seed.name, existing.id);
+      continue;
+    }
+    const [legacy] = seed.legacyNames?.length
+      ? await db
+          .select({ id: equipmentModels.id })
+          .from(equipmentModels)
+          .where(inArray(equipmentModels.name, seed.legacyNames))
+          .limit(1)
+      : [];
+    if (legacy) {
+      await db
+        .update(equipmentModels)
+        .set({ name: seed.name, description: seed.description })
+        .where(eq(equipmentModels.id, legacy.id));
+      ids.set(seed.name, legacy.id);
       continue;
     }
     const [result] = await db

@@ -5,12 +5,14 @@ import { ConfigModule } from './config/config.module.js';
 import { HealthController } from './health.controller.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
+import { CostCentersModule } from './modules/cost-centers/cost-centers.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { EquipmentModule } from './modules/equipment/equipment.module.js';
 import { ImportsModule } from './modules/imports/imports.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { ReorderModule } from './modules/reorder/reorder.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
 import { SuppliersModule } from './modules/suppliers/suppliers.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
@@ -26,6 +28,8 @@ import { DomainExceptionFilter } from './shared/presentation/domain-exception.fi
     AuthModule,
     UsersModule,
     CategoriesModule,
+    CostCentersModule,
+    SettingsModule,
     SuppliersModule,
     EquipmentModule,
     ProductsModule,

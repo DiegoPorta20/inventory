@@ -31,6 +31,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: 'Productos', path: '/products', icon: 'box' },
       { label: 'Categorías', path: '/categories', icon: 'layers' },
+      { label: 'Centros de costo', path: '/cost-centers', icon: 'tag' },
       { label: 'Movimientos', path: '/movements', icon: 'swap' },
       { label: 'Conteos físicos', path: '/counts', icon: 'clipboard-check' },
     ],
@@ -44,7 +45,13 @@ const NAV: NavGroup[] = [
       { label: 'Equipos', path: '/equipment', icon: 'wrench' },
     ],
   },
-  { title: 'Administración', items: [{ label: 'Usuarios', path: '/users', icon: 'users' }] },
+  {
+    title: 'Administración',
+    items: [
+      { label: 'Usuarios', path: '/users', icon: 'users' },
+      { label: 'Configuración', path: '/settings', icon: 'wrench' },
+    ],
+  },
 ];
 
 @Component({

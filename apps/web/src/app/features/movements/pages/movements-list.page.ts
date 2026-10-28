@@ -191,7 +191,7 @@ const FILTER_DEFAULTS = {
 
     <div class="card">
       @if (movements.isLoading()) {
-        <ui-table-skeleton [rows]="10" [cols]="7" />
+        <ui-table-skeleton [rows]="10" [cols]="8" />
       } @else if (movements.error()) {
         <ui-error-state>
           <button type="button" class="btn btn-secondary" (click)="movements.reload()">
@@ -219,6 +219,7 @@ const FILTER_DEFAULTS = {
                   <th scope="col">Tipo</th>
                   <th scope="col">Motivo</th>
                   <th scope="col" class="num">Cantidad</th>
+                  <th scope="col" class="num">Precio unit.</th>
                   <th scope="col" class="num">Stock resultante</th>
                   <th scope="col">Contraparte</th>
                   <th scope="col">Usuario</th>
@@ -247,6 +248,9 @@ const FILTER_DEFAULTS = {
                       [class]="m.quantity < 0 ? 'text-rose-600' : 'text-emerald-700'"
                     >
                       {{ m.quantity | signedQuantity }}
+                    </td>
+                    <td class="num text-slate-600">
+                      {{ m.reason === 'SALE' ? (m.unitPriceUsd | usd) : '—' }}
                     </td>
                     <td class="num">{{ m.stockAfter | quantity }}</td>
                     <td

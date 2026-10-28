@@ -2,6 +2,9 @@ export interface InventoryTotals {
   activeProducts: number;
   totalUnits: number;
   inventoryValueUsd: number;
+  inventoryValueAtPriceUsd: number;
+  withoutPrice: number;
+  consignmentUnits: number;
   outOfStock: number;
   lowStock: number;
   unconfiguredMinStock: number;
