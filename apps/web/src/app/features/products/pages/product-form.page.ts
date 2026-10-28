@@ -26,7 +26,7 @@ import { FORMAT_PIPES } from '../../../shared/pipes/format.pipes';
 import { FieldComponent, PageHeaderComponent } from '../../../shared/ui/layout.components';
 import { ErrorStateComponent } from '../../../shared/ui/states.components';
 import { ToastService } from '../../../shared/ui/toast.service';
-import { buildCategoryOptions, type CategoryOption } from '../category-options';
+import { buildCategoryOptions } from '../category-options';
 import { ProductsApi, type ProductInput } from '../products.api';
 
 const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
@@ -104,7 +104,13 @@ const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
               <select id="categoryId" class="input" formControlName="categoryId">
                 <option [ngValue]="null">— Sin categoría —</option>
                 @for (option of categoryOptions(); track option.id) {
-                  <option [ngValue]="option.id">{{ indent(option) }}{{ option.label }}</option>
+                  <option
+                    [ngValue]="option.id"
+                    [class.opt-root]="option.depth === 0"
+                    [class.opt-child]="option.depth > 0"
+                  >
+                    {{ option.label }}
+                  </option>
                 }
               </select>
             </ui-field>
@@ -525,9 +531,6 @@ export class ProductFormPage {
     this.form.controls.wholesalePriceUsd.setValue(usd);
   }
 
-  protected indent(option: CategoryOption): string {
-    return option.depth > 0 ? '\u00A0\u00A0\u00A0\u00A0' : '';
-  }
 
   protected isEquipmentSelected(id: number): boolean {
     return this.selectedEquipment().has(id);

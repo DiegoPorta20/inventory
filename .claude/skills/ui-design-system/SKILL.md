@@ -9,7 +9,7 @@ Goal: a calm, dense-but-readable operations tool. Fast scanning of tables, obvio
 
 ## Tokens (defined in `apps/web/src/styles.css` under `@theme`)
 
-- Brand: `--color-brand-50…900` (teal/emerald-leaning blue-green). Primary actions use `brand-600`, hover `brand-700`.
+- Brand: `--color-brand-50…900` (navy `#273f85` from the WY Miner logo/site; `accent-*` is its cyan `#01abce`). Primary actions use `brand-600`, hover `brand-700`.
 - Neutrals: slate scale. Page bg `slate-50`, cards white with `border-slate-200`, text `slate-900/600/500`.
 - Status colors (always paired with icon/text, never color alone): OK = emerald, LOW = amber, OUT = rose, info = sky, neutral = slate.
 - Radius: `rounded-lg` controls, `rounded-xl` cards. Shadow: `shadow-sm` only; elevation for dialogs/menus (`shadow-xl`).

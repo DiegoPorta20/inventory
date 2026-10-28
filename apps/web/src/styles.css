@@ -3,17 +3,23 @@
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --color-brand-50: var(--color-teal-50);
-  --color-brand-100: var(--color-teal-100);
-  --color-brand-200: var(--color-teal-200);
-  --color-brand-300: var(--color-teal-300);
-  --color-brand-400: var(--color-teal-400);
-  --color-brand-500: var(--color-teal-500);
-  --color-brand-600: var(--color-teal-600);
-  --color-brand-700: var(--color-teal-700);
-  --color-brand-800: var(--color-teal-800);
-  --color-brand-900: var(--color-teal-900);
-  --color-brand-950: var(--color-teal-950);
+  /* Brand palette taken from wyminerperu.com: navy #273f85 (logo), cyan #01abce, ink #081026, tint #e2e9fc. */
+  --color-brand-50: #f0f4fd;
+  --color-brand-100: #e2e9fc;
+  --color-brand-200: #c4d0ee;
+  --color-brand-300: #9fb1de;
+  --color-brand-400: #6d86c9;
+  --color-brand-500: #3a58ad;
+  --color-brand-600: #273f85;
+  --color-brand-700: #1f3269;
+  --color-brand-800: #182750;
+  --color-brand-900: #101a38;
+  --color-brand-950: #081026;
+  --color-accent-50: #e6f8fc;
+  --color-accent-100: #c2eef8;
+  --color-accent-400: #27c3e0;
+  --color-accent-500: #01abce;
+  --color-accent-600: #0190ae;
 }
 
 @layer base {
@@ -66,6 +72,18 @@
   }
   select.input {
     @apply pr-8;
+  }
+  .data-table-compact tbody td {
+    @apply py-1;
+  }
+  .data-table-compact .btn-icon {
+    @apply h-7 w-7;
+  }
+  .data-table-compact tbody tr.row-root > td {
+    @apply bg-slate-50/80;
+  }
+  .data-table-compact tbody tr:not(.row-root):hover > td {
+    @apply bg-brand-50/60;
   }
   .input.ng-invalid.ng-touched,
   .input[aria-invalid='true'] {
@@ -138,6 +156,89 @@
   .section-title {
     @apply text-xs font-semibold tracking-wide text-slate-500 uppercase;
   }
+}
+
+/*
+ * Customizable <select> (Chromium 135+ / Edge). Styles the closed control and the dropdown list.
+ * Browsers without support keep the native select, so nothing breaks.
+ */
+@supports (appearance: base-select) {
+  select.input,
+  select.input::picker(select) {
+    appearance: base-select;
+  }
+  select.input {
+    @apply inline-flex cursor-pointer items-center justify-between gap-2 pr-2.5;
+  }
+  select.input:hover:not(:disabled) {
+    border-color: var(--color-slate-400);
+  }
+  select.input::picker-icon {
+    color: var(--color-slate-400);
+    transition: rotate 0.15s ease;
+  }
+  select.input:open::picker-icon {
+    rotate: 180deg;
+    color: var(--color-brand-600);
+  }
+  select.input:open {
+    border-color: var(--color-brand-500);
+  }
+  select.input::picker(select) {
+    box-sizing: border-box;
+    min-width: anchor-size(width);
+    max-height: min(20rem, 60vh);
+    margin-block: 4px;
+    padding: 4px;
+    overflow-y: auto;
+    border: 1px solid var(--color-slate-200);
+    border-radius: 0.75rem;
+    background: #fff;
+    box-shadow:
+      0 10px 24px -6px rgb(8 16 38 / 0.18),
+      0 2px 6px rgb(8 16 38 / 0.06);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-300) transparent;
+  }
+  select.input option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 0;
+    padding: 5px 10px;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    color: var(--color-slate-700);
+    cursor: pointer;
+  }
+  select.input option:hover,
+  select.input option:focus-visible {
+    background: var(--color-brand-50);
+    color: var(--color-brand-700);
+    outline: none;
+  }
+  select.input option:checked {
+    background: var(--color-brand-100);
+    color: var(--color-brand-800);
+    font-weight: 600;
+  }
+  select.input option::checkmark {
+    order: 1;
+    margin-left: auto;
+    color: var(--color-brand-600);
+  }
+  select.input option:disabled {
+    color: var(--color-slate-400);
+    cursor: not-allowed;
+  }
+}
+/* Category hierarchy inside <option>: roots bold, children indented. */
+select.input option.opt-root {
+  font-weight: 600;
+}
+select.input option.opt-child {
+  padding-left: 1.5rem;
 }
 
 @keyframes skeleton-pulse {

@@ -7,12 +7,8 @@ import type { Category } from '../../shared/models/models';
 import { DialogFrameComponent } from '../../shared/ui/dialog-frame.component';
 import { FieldComponent } from '../../shared/ui/layout.components';
 import { ToastService } from '../../shared/ui/toast.service';
+import { buildCategoryOptions } from '../products/category-options';
 import { CountsApi } from './counts.api';
-
-interface CategoryOption {
-  id: number;
-  label: string;
-}
 
 export function openNewCountDialog(dialog: Dialog) {
   return dialog.open<number>(NewCountDialog, { ariaModal: true, autoFocus: 'first-tabbable' });
@@ -43,7 +39,7 @@ export function openNewCountDialog(dialog: Dialog) {
           <select id="count-category" class="input" formControlName="categoryId">
             <option [value]="0">Todas las categorías</option>
             @for (c of categoryOptions(); track c.id) {
-              <option [value]="c.id">{{ c.label }}</option>
+              <option [value]="c.id" [class.opt-root]="c.depth === 0" [class.opt-child]="c.depth > 0">{{ c.label }}</option>
             }
           </select>
         </ui-field>
@@ -96,20 +92,9 @@ export class NewCountDialog {
     stream: () => this.api.categories(),
   });
 
-  protected readonly categoryOptions = computed<CategoryOption[]>(() => {
-    const list = this.categories.hasValue() ? this.categories.value() : [];
-    const roots = list.filter((c) => c.parentId === null).sort((a, b) => a.sortOrder - b.sortOrder);
-    const options: CategoryOption[] = [];
-    for (const root of roots) {
-      options.push({ id: root.id, label: root.name });
-      for (const child of list
-        .filter((c) => c.parentId === root.id)
-        .sort((a, b) => a.sortOrder - b.sortOrder)) {
-        options.push({ id: child.id, label: `   ${root.name} › ${child.name}` });
-      }
-    }
-    return options;
-  });
+  protected readonly categoryOptions = computed(() =>
+    buildCategoryOptions(this.categories.hasValue() ? this.categories.value() : []),
+  );
 
   protected nameError(): string | null {
     const control = this.form.controls.name;

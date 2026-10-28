@@ -62,7 +62,7 @@ interface CategoryNode extends Category {
         </ui-empty-state>
       } @else {
         <div class="table-wrap">
-          <table class="data-table">
+          <table class="data-table data-table-compact">
             <thead>
               <tr>
                 <th>Categoría</th>
@@ -72,10 +72,10 @@ interface CategoryNode extends Category {
             </thead>
             <tbody>
               @for (node of tree(); track node.id) {
-                <tr>
+                <tr class="row-root">
                   <td>
                     <a
-                      class="font-medium text-slate-800 hover:text-brand-700"
+                      class="font-semibold text-slate-900 hover:text-brand-600"
                       [routerLink]="['/products']"
                       [queryParams]="{ categoryId: node.id }"
                     >
@@ -107,10 +107,10 @@ interface CategoryNode extends Category {
                 @for (child of node.children; track child.id) {
                   <tr>
                     <td>
-                      <span class="flex items-center gap-2 pl-6 text-slate-700">
-                        <ui-icon name="chevron-right" [size]="3" />
+                      <span class="flex items-center gap-1.5 pl-5 text-slate-700">
+                        <ui-icon name="chevron-right" [size]="3" class="text-slate-400" />
                         <a
-                          class="hover:text-brand-700"
+                          class="hover:text-brand-600"
                           [routerLink]="['/products']"
                           [queryParams]="{ categoryId: child.id }"
                         >

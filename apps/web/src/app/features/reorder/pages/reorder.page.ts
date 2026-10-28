@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { errorMessage } from '../../../core/http/api-utils';
-import type { Category, ReorderSuggestion } from '../../../shared/models/models';
+import type { ReorderSuggestion } from '../../../shared/models/models';
 import { FORMAT_PIPES } from '../../../shared/pipes/format.pipes';
 import { StockBadgeComponent } from '../../../shared/ui/badge.components';
 import { IconComponent } from '../../../shared/ui/icon.component';
@@ -17,12 +17,8 @@ import { ToastService } from '../../../shared/ui/toast.service';
 import { useQueryFilters } from '../../../shared/util/query-filters';
 import { EquipmentApi } from '../../equipment/equipment.api';
 import type { ImportNavigationState } from '../../imports/import-prefill';
+import { buildCategoryOptions } from '../../products/category-options';
 import { ReorderApi } from '../reorder.api';
-
-interface CategoryOption {
-  id: number;
-  label: string;
-}
 
 @Component({
   selector: 'app-reorder-page',
@@ -93,7 +89,7 @@ interface CategoryOption {
         >
           <option [value]="0">Todas las categorías</option>
           @for (c of categoryOptions(); track c.id) {
-            <option [value]="c.id">{{ c.label }}</option>
+            <option [value]="c.id" [class.opt-root]="c.depth === 0" [class.opt-child]="c.depth > 0">{{ c.label }}</option>
           }
         </select>
         <select
@@ -265,7 +261,7 @@ export class ReorderPage {
 
   private readonly categoriesResource = rxResource({ stream: () => this.api.categories() });
   protected readonly categoryOptions = computed(() =>
-    this.buildCategoryOptions(
+    buildCategoryOptions(
       this.categoriesResource.hasValue() ? this.categoriesResource.value() : [],
     ),
   );
@@ -372,25 +368,5 @@ export class ReorderPage {
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(url);
-  }
-
-  private buildCategoryOptions(categories: Category[]): CategoryOption[] {
-    const byParent = new Map<number | null, Category[]>();
-    for (const category of categories) {
-      const list = byParent.get(category.parentId) ?? [];
-      list.push(category);
-      byParent.set(category.parentId, list);
-    }
-    const sortFn = (a: Category, b: Category) =>
-      a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
-    const options: CategoryOption[] = [];
-    const walk = (parentId: number | null, depth: number): void => {
-      for (const category of (byParent.get(parentId) ?? []).sort(sortFn)) {
-        options.push({ id: category.id, label: `${'\u00A0\u00A0'.repeat(depth)}${category.name}` });
-        walk(category.id, depth + 1);
-      }
-    };
-    walk(null, 0);
-    return options;
   }
 }

@@ -6,7 +6,7 @@ import type { Category, CostCenter } from '../../../shared/models/models';
 import { DialogFrameComponent } from '../../../shared/ui/dialog-frame.component';
 import { FieldComponent } from '../../../shared/ui/layout.components';
 import { ToastService } from '../../../shared/ui/toast.service';
-import { buildCategoryOptions, type CategoryOption } from '../category-options';
+import { buildCategoryOptions } from '../category-options';
 import { ProductsApi, type BulkChanges } from '../products.api';
 
 export type BulkAction = 'category' | 'costCenter' | 'stockLevels' | 'activation';
@@ -47,7 +47,13 @@ export function openBulkDialog(dialog: Dialog, data: BulkDialogData) {
               <select id="bulk-category" class="input" formControlName="categoryId">
                 <option [ngValue]="null">— Sin categoría —</option>
                 @for (option of categoryOptions; track option.id) {
-                  <option [ngValue]="option.id">{{ indent(option) }}{{ option.label }}</option>
+                  <option
+                    [ngValue]="option.id"
+                    [class.opt-root]="option.depth === 0"
+                    [class.opt-child]="option.depth > 0"
+                  >
+                    {{ option.label }}
+                  </option>
                 }
               </select>
             </ui-field>
@@ -138,9 +144,6 @@ export class BulkActionDialog {
     isActive: [true],
   });
 
-  protected indent(option: CategoryOption): string {
-    return option.depth > 0 ? '\u00A0\u00A0\u00A0\u00A0' : '';
-  }
 
   private buildChanges(): BulkChanges | null {
     const value = this.form.getRawValue();

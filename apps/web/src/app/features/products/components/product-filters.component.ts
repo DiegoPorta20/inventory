@@ -10,7 +10,7 @@ import type {
 } from '../../../shared/models/models';
 import { IconComponent } from '../../../shared/ui/icon.component';
 import { SearchInputComponent } from '../../../shared/ui/search-input.component';
-import { buildCategoryOptions, type CategoryOption } from '../category-options';
+import { buildCategoryOptions } from '../category-options';
 
 export interface ProductFilterValues {
   search: string;
@@ -58,7 +58,13 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         >
           <option value="">Todas las categorías</option>
           @for (option of categoryOptions(); track option.id) {
-            <option [value]="option.id">{{ indent(option) }}{{ option.label }}</option>
+            <option
+              [value]="option.id"
+              [class.opt-root]="option.depth === 0"
+              [class.opt-child]="option.depth > 0"
+            >
+              {{ option.label }}
+            </option>
           }
         </select>
 
@@ -244,10 +250,6 @@ export class ProductFiltersComponent {
 
   protected asString(value: number): string {
     return value ? String(value) : '';
-  }
-
-  protected indent(option: CategoryOption): string {
-    return option.depth > 0 ? '\u00A0\u00A0\u00A0\u00A0' : '';
   }
 
   protected patch(change: Partial<ProductFilterValues>): void {
