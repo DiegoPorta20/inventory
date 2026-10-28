@@ -1,0 +1,30 @@
+{
+  "name": "inventory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal inventory management for a spare parts company (Angular + NestJS + MySQL)",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @inventory/api --filter @inventory/web run dev",
+    "dev:api": "pnpm --filter @inventory/api dev",
+    "dev:web": "pnpm --filter @inventory/web dev",
+    "build": "pnpm --filter @inventory/web build && pnpm --filter @inventory/api build",
+    "start": "pnpm --filter @inventory/api start:prod",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,html,css}\" \"*.{json,md,yml}\" \".claude/**/*.{md,json}\" \"docs/**/*.md\"",
+    "db:up": "docker compose up -d mysql",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @inventory/api db:generate",
+    "db:migrate": "pnpm --filter @inventory/api db:migrate",
+    "db:seed": "pnpm --filter @inventory/api db:seed",
+    "db:import-excel": "pnpm --filter @inventory/api db:import-excel"
+  },
+  "devDependencies": {
+    "prettier": "3.8.1"
+  }
+}

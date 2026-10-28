@@ -1,0 +1,39 @@
+# Dependencies & build output
+node_modules/
+dist/
+out-tsc/
+tmp/
+coverage/
+.angular/
+*.tsbuildinfo
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Business data (never commit the real inventory spreadsheets)
+data/*
+!data/.gitkeep
+*.xlsx
+*.xls
+!**/fixtures/**/*.xlsx
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Claude local overrides
+.claude/settings.local.json
+CLAUDE.local.md
