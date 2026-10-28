@@ -23,7 +23,8 @@
     "db:migrate": "pnpm --filter @inventory/api db:migrate",
     "db:seed": "pnpm --filter @inventory/api db:seed",
     "db:import-excel": "pnpm --filter @inventory/api db:import-excel",
-    "db:import-prices": "pnpm --filter @inventory/api db:import-prices"
+    "db:import-prices": "pnpm --filter @inventory/api db:import-prices",
+    "db:seed-demo": "pnpm --filter @inventory/api db:seed-demo"
   },
   "devDependencies": {
     "prettier": "3.8.1"

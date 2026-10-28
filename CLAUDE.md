@@ -22,6 +22,8 @@ pnpm db:up              # MySQL in docker (needs .env from .env.example)
 pnpm db:migrate         # apply migrations
 pnpm db:seed            # first admin user + base categories
 pnpm db:import-excel    # load data/inventory.xlsx
+pnpm db:import-prices   # apply data/Precios*.xlsx (prices, cost centers, consignment)
+pnpm db:seed-demo       # dev only: random commercial data, imports, sales, count
 pnpm dev                # api :3000 + web :4200 (proxy /api)
 pnpm lint | typecheck | test | build
 ```

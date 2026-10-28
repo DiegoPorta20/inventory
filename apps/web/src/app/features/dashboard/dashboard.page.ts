@@ -50,7 +50,7 @@ const TREND_DAYS = 30;
         </ui-error-state>
       </div>
     } @else if (data(); as d) {
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <ui-stat-card label="Productos activos" [value]="d.totals.activeProducts | quantity" />
         <ui-stat-card
           label="Unidades en stock"

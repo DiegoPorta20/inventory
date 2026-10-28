@@ -22,8 +22,11 @@ pnpm db:migrate               # crea las tablas
 pnpm db:seed                  # admin inicial + categorías + equipos
 pnpm db:import-excel          # opcional: carga data/inventory.xlsx
 pnpm db:import-prices         # opcional: aplica data/Precios*.xlsx (precios, centros de costo, consignación)
+pnpm db:seed-demo             # solo desarrollo: datos aleatorios para que todas las pantallas tengan información
 pnpm dev                      # API http://localhost:3000 + web http://localhost:4200
 ```
+
+`db:seed-demo` completa precios, costos, stock mínimo, ubicaciones y centros de costo faltantes, y crea proveedores, 4 importaciones (pedido, en tránsito, borrador, recibida), ventas recientes y un conteo físico. Es determinista y se niega a correr en producción o si ya hay datos demo; para repetirlo: `pnpm db:import-excel --reset && pnpm db:import-prices && pnpm db:seed-demo`.
 
 Usuario inicial: el definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (`.env`). Cámbiala desde *Mi cuenta*.
 
