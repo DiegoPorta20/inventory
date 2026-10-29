@@ -62,10 +62,10 @@ export interface Product {
   minStock: number;
   reorderQuantity: number;
   location: string | null;
-  costUsd: number | null;
-  /** Sale price in USD without IGV. */
-  priceUsd: number | null;
-  wholesalePriceUsd: number | null;
+  costPen: number | null;
+  /** Sale price in soles without IGV. */
+  pricePen: number | null;
+  wholesalePricePen: number | null;
   wholesaleMinQty: number | null;
   isConsignment: boolean;
   notes: string | null;
@@ -75,9 +75,8 @@ export interface Product {
 }
 
 export interface PriceBreakdown {
-  priceUsd: number;
-  igvUsd: number;
-  priceWithIgvUsd: number;
+  pricePen: number;
+  igvPen: number;
   priceWithIgvPen: number;
 }
 
@@ -88,7 +87,6 @@ export interface ProductPricing {
 }
 
 export interface PricingSettings {
-  exchangeRate: number;
   igvRate: number;
 }
 
@@ -138,7 +136,7 @@ export interface StockMovement {
   reason: MovementReason;
   quantity: number;
   stockAfter: number;
-  unitPriceUsd: number | null;
+  unitPricePen: number | null;
   counterparty: string | null;
   referenceType: 'IMPORT_ORDER' | 'STOCK_COUNT' | null;
   referenceId: number | null;
@@ -159,13 +157,12 @@ export interface ImportOrderSummary {
   orderedAt: string | null;
   expectedAt: string | null;
   receivedAt: string | null;
-  exchangeRate: number | null;
   notes: string | null;
   createdAt: string;
   itemCount: number;
   totalOrdered: number;
   totalReceived: number;
-  totalCostUsd: number;
+  totalCostPen: number;
 }
 
 export interface ImportOrderItem {
@@ -176,7 +173,7 @@ export interface ImportOrderItem {
   unit: UnitOfMeasure;
   quantityOrdered: number;
   quantityReceived: number;
-  unitCostUsd: number | null;
+  unitCostPen: number | null;
   notes: string | null;
 }
 
@@ -221,20 +218,20 @@ export interface StockCountItem {
 export interface ReorderSuggestion {
   product: ProductListItem;
   suggestedQty: number;
-  estimatedCostUsd: number | null;
+  estimatedCostPen: number | null;
 }
 
 export interface ReorderReport {
   items: ReorderSuggestion[];
-  summary: { total: number; outOfStock: number; estimatedCostUsd: number };
+  summary: { total: number; outOfStock: number; estimatedCostPen: number };
 }
 
 export interface DashboardSummary {
   totals: {
     activeProducts: number;
     totalUnits: number;
-    inventoryValueUsd: number;
-    inventoryValueAtPriceUsd: number;
+    inventoryValuePen: number;
+    inventoryValueAtPricePen: number;
     withoutPrice: number;
     consignmentUnits: number;
     outOfStock: number;
@@ -248,7 +245,7 @@ export interface DashboardSummary {
     name: string;
     products: number;
     units: number;
-    valueUsd: number;
+    valuePen: number;
   }[];
   dailyMovements: { date: string; inQty: number; outQty: number }[];
   topSold: { productId: number; code: string; name: string; quantity: number }[];
@@ -264,4 +261,38 @@ export interface DashboardSummary {
     userName: string | null;
   }[];
   attention: (ProductListItem & { suggestedQty: number })[];
+}
+
+export interface ProductImportIssue {
+  column: string;
+  message: string;
+}
+
+export interface ProductImportRow {
+  rowNumber: number;
+  action: 'CREATE' | 'UPDATE';
+  /** Null when the system assigns an internal code. */
+  code: string | null;
+  name: string | null;
+  errors: ProductImportIssue[];
+  warnings: ProductImportIssue[];
+}
+
+export interface ProductImportPreview {
+  fileErrors: string[];
+  fileWarnings: string[];
+  summary: {
+    totalRows: number;
+    toCreate: number;
+    toUpdate: number;
+    withErrors: number;
+    withWarnings: number;
+  };
+  rows: ProductImportRow[];
+}
+
+export interface ProductImportResult {
+  created: number;
+  updated: number;
+  initialStockMovements: number;
 }

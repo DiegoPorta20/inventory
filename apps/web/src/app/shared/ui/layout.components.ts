@@ -4,11 +4,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: 'ui-page-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-5 flex flex-wrap items-start justify-between gap-3">
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div class="min-w-0">
         <h1 class="page-title">{{ title() }}</h1>
         @if (subtitle()) {
-          <p class="mt-0.5 text-sm text-slate-500">{{ subtitle() }}</p>
+          <p class="mt-2 text-sm text-slate-500">{{ subtitle() }}</p>
         }
       </div>
       <div class="flex flex-wrap items-center gap-2"><ng-content /></div>
@@ -53,10 +53,12 @@ export class FieldComponent {
 @Component({
   selector: 'ui-stat-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'card block p-4' },
+  host: { class: 'card block p-5' },
   template: `
-    <p class="text-xs font-medium text-slate-500">{{ label() }}</p>
-    <p class="mt-1 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+    <p class="text-xs font-semibold text-slate-500">{{ label() }}</p>
+    <p
+      class="mt-1.5 text-[26px] leading-tight font-semibold tracking-tight text-slate-900 tabular-nums"
+    >
       {{ value() }}
     </p>
     @if (hint()) {

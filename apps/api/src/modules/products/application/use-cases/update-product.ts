@@ -22,9 +22,9 @@ export class UpdateProduct {
     await this.references.assertCostCenter(input.costCenterId);
     await this.references.assertEquipment(input.equipmentIds);
     this.references.assertPricing({
-      costUsd: input.costUsd,
-      priceUsd: input.priceUsd,
-      wholesalePriceUsd: input.wholesalePriceUsd,
+      costPen: input.costPen,
+      pricePen: input.pricePen,
+      wholesalePricePen: input.wholesalePricePen,
     });
 
     const changes: ProductChanges = {
@@ -37,9 +37,9 @@ export class UpdateProduct {
       minStock: input.minStock,
       reorderQuantity: input.reorderQuantity,
       location: input.location,
-      costUsd: input.costUsd,
-      priceUsd: input.priceUsd,
-      wholesalePriceUsd: input.wholesalePriceUsd,
+      costPen: input.costPen,
+      pricePen: input.pricePen,
+      wholesalePricePen: input.wholesalePricePen,
       wholesaleMinQty: input.wholesaleMinQty,
       isConsignment: input.isConsignment,
       notes: input.notes,

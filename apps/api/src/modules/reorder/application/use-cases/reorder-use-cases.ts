@@ -16,12 +16,12 @@ export interface ReorderFilters {
 export interface ReorderSuggestion {
   product: ProductListItem;
   suggestedQty: number;
-  estimatedCostUsd: number | null;
+  estimatedCostPen: number | null;
 }
 
 export interface ReorderReport {
   items: ReorderSuggestion[];
-  summary: { total: number; outOfStock: number; estimatedCostUsd: number };
+  summary: { total: number; outOfStock: number; estimatedCostPen: number };
 }
 
 @Injectable()
@@ -48,7 +48,7 @@ export class GetReorderSuggestions {
       return {
         product,
         suggestedQty,
-        estimatedCostUsd: product.costUsd == null ? null : product.costUsd * suggestedQty,
+        estimatedCostPen: product.costPen == null ? null : product.costPen * suggestedQty,
       };
     });
 
@@ -57,7 +57,7 @@ export class GetReorderSuggestions {
       summary: {
         total: items.length,
         outOfStock: items.filter((item) => item.product.stockStatus === 'OUT').length,
-        estimatedCostUsd: items.reduce((sum, item) => sum + (item.estimatedCostUsd ?? 0), 0),
+        estimatedCostPen: items.reduce((sum, item) => sum + (item.estimatedCostPen ?? 0), 0),
       },
     };
   }
@@ -83,10 +83,10 @@ export class ExportReorderSuggestions {
         { header: 'Stock mínimo', key: 'minStock', width: 14 },
         { header: 'En camino', key: 'incoming', width: 12 },
         { header: 'Cantidad sugerida', key: 'suggested', width: 18 },
-        { header: 'Costo unit. USD', key: 'cost', width: 16, numFmt: '#,##0.00' },
-        { header: 'Costo estimado USD', key: 'estimated', width: 20, numFmt: '#,##0.00' },
+        { header: 'Costo unit. S/', key: 'cost', width: 16, numFmt: '#,##0.00' },
+        { header: 'Costo estimado S/', key: 'estimated', width: 20, numFmt: '#,##0.00' },
       ],
-      rows: items.map(({ product, suggestedQty, estimatedCostUsd }) => ({
+      rows: items.map(({ product, suggestedQty, estimatedCostPen }) => ({
         code: product.code,
         name: product.name,
         category: product.categoryName,
@@ -95,8 +95,8 @@ export class ExportReorderSuggestions {
         minStock: product.minStock,
         incoming: product.incomingQty,
         suggested: suggestedQty,
-        cost: product.costUsd,
-        estimated: estimatedCostUsd,
+        cost: product.costPen,
+        estimated: estimatedCostPen,
       })),
     });
   }

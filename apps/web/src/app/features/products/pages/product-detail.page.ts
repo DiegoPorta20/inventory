@@ -135,20 +135,16 @@ type Tab = 'movements' | 'imports';
           @if (p.pricing.retail; as retail) {
             <p class="text-2xl font-semibold tabular-nums text-slate-900">
               {{ retail.priceWithIgvPen | pen }}
-              <span class="text-sm font-normal text-slate-500">S/ con IGV</span>
+              <span class="text-sm font-normal text-slate-500">con IGV</span>
             </p>
             <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
-                <dt class="text-xs text-slate-500">USD sin IGV</dt>
-                <dd class="font-medium tabular-nums">{{ retail.priceUsd | usd }}</dd>
+                <dt class="text-xs text-slate-500">Precio sin IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retail.pricePen | pen }}</dd>
               </div>
               <div>
                 <dt class="text-xs text-slate-500">IGV</dt>
-                <dd class="font-medium tabular-nums">{{ retail.igvUsd | usd }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs text-slate-500">USD con IGV</dt>
-                <dd class="font-medium tabular-nums">{{ retail.priceWithIgvUsd | usd }}</dd>
+                <dd class="font-medium tabular-nums">{{ retail.igvPen | pen }}</dd>
               </div>
               @if (p.pricing.marginPercent !== null) {
                 <div>
@@ -172,9 +168,10 @@ type Tab = 'movements' | 'imports';
                 </p>
                 <p class="mt-0.5 text-lg font-semibold tabular-nums text-slate-900">
                   {{ wholesale.priceWithIgvPen | pen }}
-                  <span class="text-xs font-normal text-slate-400">{{
-                    wholesale.priceUsd | usd
-                  }}</span>
+                  <span class="text-xs font-normal text-slate-500">con IGV</span>
+                  <span class="ml-2 text-xs font-normal text-slate-400"
+                    >{{ wholesale.pricePen | pen }} sin IGV</span
+                  >
                 </p>
               </div>
             }
@@ -186,8 +183,8 @@ type Tab = 'movements' | 'imports';
           }
           <dl class="mt-3 border-t border-slate-100 pt-3">
             <div class="flex justify-between gap-3 text-sm">
-              <dt class="text-slate-500">Costo</dt>
-              <dd class="font-medium tabular-nums">{{ p.costUsd | usd: true }}</dd>
+              <dt class="text-slate-500">Costo (sin IGV)</dt>
+              <dd class="font-medium tabular-nums">{{ p.costPen | pen: true }}</dd>
             </div>
           </dl>
         </section>

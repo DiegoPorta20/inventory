@@ -7,7 +7,7 @@ export interface ImportPrefillLine {
   name: string;
   unit: UnitOfMeasure;
   quantityOrdered: number;
-  unitCostUsd: number | null;
+  unitCostPen: number | null;
 }
 
 export interface ImportPrefill {

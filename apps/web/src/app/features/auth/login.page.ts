@@ -11,12 +11,14 @@ import { AuthService } from '../../core/auth/auth.service';
   imports: [ReactiveFormsModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="grid min-h-screen lg:grid-cols-2">
+    <div class="grid min-h-screen gap-3.5 lg:grid-cols-2 lg:p-3.5">
       <section
-        class="relative hidden flex-col justify-between overflow-hidden bg-brand-900 p-10 text-white lg:flex"
+        class="relative hidden flex-col justify-between overflow-hidden rounded-[26px] bg-brand-900 p-10 text-white shadow-lg lg:flex"
       >
         <div class="flex items-center gap-3">
-          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+          <span
+            class="flex h-10 w-10 items-center justify-center rounded-[13px] bg-brand-100 text-brand-900"
+          >
             <ui-icon name="box" [size]="6" />
           </span>
           <span class="text-lg font-semibold">Inventario</span>

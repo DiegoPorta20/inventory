@@ -20,6 +20,7 @@ import { ToastService } from '../../../shared/ui/toast.service';
 import { SuppliersApi } from '../../suppliers/suppliers.api';
 import type { ImportNavigationState, ImportPrefillLine } from '../import-prefill';
 import { ImportsApi, type ImportOrderInput } from '../imports.api';
+import { DateInputComponent } from '../../../shared/ui/date-input.component';
 
 interface LineRow {
   productId: number;
@@ -27,7 +28,7 @@ interface LineRow {
   name: string;
   unit: UnitOfMeasure;
   quantityOrdered: number;
-  unitCostUsd: number | null;
+  unitCostPen: number | null;
 }
 
 interface FormState {
@@ -36,7 +37,6 @@ interface FormState {
   reference: string;
   orderedAt: string;
   expectedAt: string;
-  exchangeRate: number | null;
   notes: string;
   status: 'DRAFT' | 'ORDERED';
 }
@@ -44,6 +44,7 @@ interface FormState {
 @Component({
   selector: 'app-import-form-page',
   imports: [
+    DateInputComponent,
     RouterLink,
     FORMAT_PIPES,
     IconComponent,
@@ -115,32 +116,17 @@ interface FormState {
               />
             </ui-field>
             <ui-field label="Fecha de pedido" for="imp-ordered" [error]="errors()['orderedAt']">
-              <input
-                id="imp-ordered"
-                class="input"
-                type="date"
+              <ui-date-input
+                inputId="imp-ordered"
                 [value]="form().orderedAt"
-                (change)="patch('orderedAt', $any($event.target).value)"
+                (valueChange)="patch('orderedAt', $event)"
               />
             </ui-field>
             <ui-field label="Fecha esperada" for="imp-expected" [error]="errors()['expectedAt']">
-              <input
-                id="imp-expected"
-                class="input"
-                type="date"
+              <ui-date-input
+                inputId="imp-expected"
                 [value]="form().expectedAt"
-                (change)="patch('expectedAt', $any($event.target).value)"
-              />
-            </ui-field>
-            <ui-field label="Tipo de cambio" for="imp-rate" [error]="errors()['exchangeRate']">
-              <input
-                id="imp-rate"
-                class="input"
-                type="number"
-                min="0"
-                step="0.01"
-                [value]="form().exchangeRate ?? ''"
-                (input)="patch('exchangeRate', toNum($any($event.target).value))"
+                (valueChange)="patch('expectedAt', $event)"
               />
             </ui-field>
             @if (!isEdit()) {
@@ -198,7 +184,7 @@ interface FormState {
                   <tr>
                     <th>Producto</th>
                     <th class="num">Cantidad</th>
-                    <th class="num">Costo unit. USD</th>
+                    <th class="num">Costo unit. S/</th>
                     <th class="num">Subtotal</th>
                     <th><span class="sr-only">Quitar</span></th>
                   </tr>
@@ -230,11 +216,11 @@ interface FormState {
                           min="0"
                           step="0.01"
                           [attr.aria-label]="'Costo unitario de ' + line.name"
-                          [value]="line.unitCostUsd ?? ''"
+                          [value]="line.unitCostPen ?? ''"
                           (input)="setCost(i, $any($event.target).value)"
                         />
                       </td>
-                      <td class="num font-medium">{{ lineSubtotal(line) | usd }}</td>
+                      <td class="num font-medium">{{ lineSubtotal(line) | pen }}</td>
                       <td>
                         <button
                           type="button"
@@ -253,7 +239,7 @@ interface FormState {
                     <td>Total</td>
                     <td class="num">{{ totalUnits() | quantity }}</td>
                     <td></td>
-                    <td class="num">{{ totalCost() | usd }}</td>
+                    <td class="num">{{ totalCost() | pen }}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -305,7 +291,6 @@ export class ImportFormPage {
     reference: '',
     orderedAt: '',
     expectedAt: '',
-    exchangeRate: null,
     notes: '',
     status: 'DRAFT',
   });
@@ -316,7 +301,7 @@ export class ImportFormPage {
     this.lines().reduce((sum, line) => sum + line.quantityOrdered, 0),
   );
   protected readonly totalCost = computed(() =>
-    this.lines().reduce((sum, line) => sum + (line.unitCostUsd ?? 0) * line.quantityOrdered, 0),
+    this.lines().reduce((sum, line) => sum + (line.unitCostPen ?? 0) * line.quantityOrdered, 0),
   );
 
   private readonly suppliersResource = rxResource({ stream: () => this.suppliersApi.list({}) });
@@ -350,7 +335,6 @@ export class ImportFormPage {
         reference: order.reference ?? '',
         orderedAt: order.orderedAt ?? '',
         expectedAt: order.expectedAt ?? '',
-        exchangeRate: order.exchangeRate,
         notes: order.notes ?? '',
         status: 'DRAFT',
       });
@@ -361,7 +345,7 @@ export class ImportFormPage {
           name: item.productName,
           unit: item.unit,
           quantityOrdered: item.quantityOrdered,
-          unitCostUsd: item.unitCostUsd,
+          unitCostPen: item.unitCostPen,
         })),
       );
     });
@@ -385,11 +369,6 @@ export class ImportFormPage {
     return value === '' || !Number.isFinite(n) ? null : Math.floor(n);
   }
 
-  protected toNum(value: string): number | null {
-    const n = Number(value);
-    return value === '' || !Number.isFinite(n) ? null : n;
-  }
-
   protected toSupplier(value: string): number | null {
     const n = Number(value);
     return n > 0 ? n : null;
@@ -408,7 +387,7 @@ export class ImportFormPage {
         name: product.name,
         unit: product.unit,
         quantityOrdered: 1,
-        unitCostUsd: product.costUsd,
+        unitCostPen: product.costPen,
       },
     ]);
   }
@@ -427,12 +406,12 @@ export class ImportFormPage {
   protected setCost(index: number, value: string): void {
     const next = value === '' ? null : Math.max(0, Number(value) || 0);
     this.lines.update((lines) =>
-      lines.map((line, i) => (i === index ? { ...line, unitCostUsd: next } : line)),
+      lines.map((line, i) => (i === index ? { ...line, unitCostPen: next } : line)),
     );
   }
 
   protected lineSubtotal(line: LineRow): number | null {
-    return line.unitCostUsd == null ? null : line.unitCostUsd * line.quantityOrdered;
+    return line.unitCostPen == null ? null : line.unitCostPen * line.quantityOrdered;
   }
 
   protected cancelLink(): unknown[] {
@@ -447,12 +426,11 @@ export class ImportFormPage {
       reference: value.reference.trim() || null,
       orderedAt: value.orderedAt || null,
       expectedAt: value.expectedAt || null,
-      exchangeRate: value.exchangeRate,
       notes: value.notes.trim() || null,
       items: this.lines().map((line) => ({
         productId: line.productId,
         quantityOrdered: line.quantityOrdered,
-        unitCostUsd: line.unitCostUsd,
+        unitCostPen: line.unitCostPen,
       })),
     };
     if (value.number != null) payload.number = value.number;

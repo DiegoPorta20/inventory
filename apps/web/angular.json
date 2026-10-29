@@ -26,9 +26,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.css"
-            ]
+            "styles": ["@fontsource-variable/urbanist/wght.css", "src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -45,7 +43,11 @@
                 }
               ],
               "outputHashing": "all",
-              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": false }, "fonts": false }
+              "optimization": {
+                "scripts": true,
+                "styles": { "minify": true, "inlineCritical": false },
+                "fonts": false
+              }
             },
             "development": {
               "optimization": false,

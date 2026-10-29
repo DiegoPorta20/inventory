@@ -1,8 +1,8 @@
 export interface InventoryTotals {
   activeProducts: number;
   totalUnits: number;
-  inventoryValueUsd: number;
-  inventoryValueAtPriceUsd: number;
+  inventoryValuePen: number;
+  inventoryValueAtPricePen: number;
   withoutPrice: number;
   consignmentUnits: number;
   outOfStock: number;
@@ -17,7 +17,7 @@ export interface CategoryStock {
   name: string;
   products: number;
   units: number;
-  valueUsd: number;
+  valuePen: number;
 }
 
 export interface DailyMovement {

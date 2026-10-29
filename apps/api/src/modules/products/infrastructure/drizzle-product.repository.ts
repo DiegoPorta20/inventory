@@ -76,8 +76,8 @@ const SORT_COLUMNS = {
   name: products.name,
   stock: products.stock,
   updatedAt: products.updatedAt,
-  cost: products.costUsd,
-  price: products.priceUsd,
+  cost: products.costPen,
+  price: products.pricePen,
 } as const satisfies Record<ProductSortField, unknown>;
 
 const escapeLike = (value: string): string => value.replace(/[\\%_]/g, '\\$&');
@@ -126,6 +126,15 @@ export class DrizzleProductRepository extends ProductRepository {
       .where(eq(products.code, code))
       .limit(1);
     return row ? toProduct(row) : null;
+  }
+
+  async findByCodes(codes: string[]): Promise<Product[]> {
+    if (codes.length === 0) return [];
+    const rows = await this.database.db
+      .select()
+      .from(products)
+      .where(inArray(products.code, codes));
+    return rows.map(toProduct);
   }
 
   async findDetail(id: number): Promise<ProductDetail | null> {
@@ -289,7 +298,7 @@ export class DrizzleProductRepository extends ProductRepository {
       conditions.push(eq(products.isConsignment, filters.isConsignment));
     }
     if (filters.hasPrice !== undefined) {
-      conditions.push(filters.hasPrice ? isNotNull(products.priceUsd) : isNull(products.priceUsd));
+      conditions.push(filters.hasPrice ? isNotNull(products.pricePen) : isNull(products.pricePen));
     }
     if (filters.isActive !== undefined) conditions.push(eq(products.isActive, filters.isActive));
     if (filters.isInternalCode !== undefined) {

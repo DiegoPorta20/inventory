@@ -26,6 +26,7 @@ import { ToastService } from '../../../shared/ui/toast.service';
 import { useQueryFilters } from '../../../shared/util/query-filters';
 import { MovementsApi, type MovementFilters } from '../movements.api';
 import { openRegisterMovement } from '../register-movement.dialog';
+import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.component';
 
 const PAGE_SIZE = 25;
 
@@ -44,6 +45,7 @@ const FILTER_DEFAULTS = {
 @Component({
   selector: 'app-movements-list-page',
   imports: [
+    DateRangeFilterComponent,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -70,7 +72,7 @@ const FILTER_DEFAULTS = {
       >
         <ui-icon name="download" [size]="4" /> {{ exporting() ? 'Exportando…' : 'Exportar Excel' }}
       </button>
-      <button type="button" class="btn btn-primary" (click)="register()">
+      <button type="button" class="btn btn-primary magnetic" (click)="register()">
         <ui-icon name="plus" [size]="4" /> Registrar movimiento
       </button>
     </ui-page-header>
@@ -91,7 +93,7 @@ const FILTER_DEFAULTS = {
           <label class="label" for="movements-type">Tipo</label>
           <select
             id="movements-type"
-            class="input"
+            class="input input-pill"
             [value]="f().type"
             (change)="onType($any($event.target).value)"
           >
@@ -106,7 +108,7 @@ const FILTER_DEFAULTS = {
           <label class="label" for="movements-reason">Motivo</label>
           <select
             id="movements-reason"
-            class="input"
+            class="input input-pill"
             [value]="f().reason"
             (change)="onReason($any($event.target).value)"
           >
@@ -117,25 +119,13 @@ const FILTER_DEFAULTS = {
           </select>
         </div>
 
-        <div>
-          <label class="label" for="movements-from">Desde</label>
-          <input
-            id="movements-from"
-            class="input"
-            type="date"
-            [value]="f().from"
-            (change)="filters.patch({ from: $any($event.target).value })"
-          />
-        </div>
-
-        <div>
-          <label class="label" for="movements-to">Hasta</label>
-          <input
-            id="movements-to"
-            class="input"
-            type="date"
-            [value]="f().to"
-            (change)="filters.patch({ to: $any($event.target).value })"
+        <div class="lg:col-span-2">
+          <p class="label">Fechas</p>
+          <ui-date-range
+            ariaLabel="Fechas del movimiento"
+            [from]="f().from"
+            [to]="f().to"
+            (rangeChange)="filters.patch($event)"
           />
         </div>
 
@@ -250,7 +240,7 @@ const FILTER_DEFAULTS = {
                       {{ m.quantity | signedQuantity }}
                     </td>
                     <td class="num text-slate-600">
-                      {{ m.reason === 'SALE' ? (m.unitPriceUsd | usd) : '—' }}
+                      {{ m.reason === 'SALE' ? (m.unitPricePen | pen) : '—' }}
                     </td>
                     <td class="num">{{ m.stockAfter | quantity }}</td>
                     <td

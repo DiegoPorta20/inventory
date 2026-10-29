@@ -43,7 +43,7 @@ const round = (value: number, decimals = 4) => Math.round(value * 10 ** decimals
 const logUniform = (min: number, max: number) => Math.exp(between(Math.log(min), Math.log(max)));
 const chance = (probability: number) => random() < probability;
 
-const PRICE_RANGE_USD: Record<string, [number, number]> = {
+const PRICE_RANGE_PEN: Record<string, [number, number]> = {
   equipment: [1500, 9000],
   drilling: [15, 300],
   fasteners: [0.3, 4],
@@ -96,9 +96,9 @@ interface Row {
   stock: number;
   minStock: number;
   reorderQuantity: number;
-  costUsd: number | null;
-  priceUsd: number | null;
-  wholesalePriceUsd: number | null;
+  costPen: number | null;
+  pricePen: number | null;
+  wholesalePricePen: number | null;
   location: string | null;
   costCenterId: number | null;
   categoryId: number | null;
@@ -127,21 +127,21 @@ async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
 
   for (const product of rows) {
     const slug = rootSlug(product.categoryId);
-    const [min, max] = PRICE_RANGE_USD[slug] ?? [3, 60];
+    const [min, max] = PRICE_RANGE_PEN[slug] ?? [3, 60];
     const changes: Partial<typeof products.$inferInsert> = {};
-    let { costUsd, priceUsd } = product;
+    let { costPen, pricePen } = product;
 
-    if (priceUsd === null) {
-      costUsd ??= round(logUniform(min, max));
-      priceUsd = round(costUsd * between(1.3, 1.9));
-      changes.priceUsd = priceUsd;
-    } else if (costUsd === null) {
-      costUsd = round(priceUsd / between(1.25, 1.7));
+    if (pricePen === null) {
+      costPen ??= round(logUniform(min, max));
+      pricePen = round(costPen * between(1.3, 1.9));
+      changes.pricePen = pricePen;
+    } else if (costPen === null) {
+      costPen = round(pricePen / between(1.25, 1.7));
     }
-    if (product.costUsd === null) changes.costUsd = costUsd;
+    if (product.costPen === null) changes.costPen = costPen;
 
-    if (product.wholesalePriceUsd === null && chance(0.15)) {
-      changes.wholesalePriceUsd = round(priceUsd * between(0.85, 0.93));
+    if (product.wholesalePricePen === null && chance(0.15)) {
+      changes.wholesalePricePen = round(pricePen * between(0.85, 0.93));
       changes.wholesaleMinQty = pick([6, 12, 24, 50]);
     }
     if (product.location === null && chance(0.85)) {
@@ -185,9 +185,9 @@ async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
       stock: product.stock,
       minStock,
       reorderQuantity,
-      costUsd,
-      priceUsd,
-      wholesalePriceUsd: changes.wholesalePriceUsd ?? product.wholesalePriceUsd,
+      costPen,
+      pricePen,
+      wholesalePricePen: changes.wholesalePricePen ?? product.wholesalePricePen,
       location: changes.location ?? product.location,
       costCenterId: changes.costCenterId ?? product.costCenterId,
       categoryId: product.categoryId,
@@ -217,7 +217,7 @@ interface MovementEvent {
   reason: 'SALE' | 'CUSTOMER_RETURN' | 'DAMAGE' | 'IMPORT_RECEIPT';
   quantity: number;
   counterparty?: string;
-  unitPriceUsd?: number | null;
+  unitPricePen?: number | null;
   referenceId?: number;
   note?: string;
 }
@@ -243,7 +243,7 @@ async function createImports(
   const lineFor = (product: Row) => ({
     productId: product.id,
     quantityOrdered: Math.max(product.reorderQuantity, product.minStock * 2 - product.stock, 1),
-    unitCostUsd: product.costUsd,
+    unitCostPen: product.costPen,
   });
   const take = (source: Row[], count: number) => {
     const copy = [...source];
@@ -303,7 +303,6 @@ async function createImports(
       orderedAt,
       expectedAt,
       receivedAt: isReceived ? expectedAt : null,
-      exchangeRate: 3.6,
       notes: `${DEMO_MARKER}: sample import for testing`,
     });
     const lines = plan.lines.map(lineFor);
@@ -313,7 +312,7 @@ async function createImports(
         productId: line.productId,
         quantityOrdered: line.quantityOrdered,
         quantityReceived: isReceived ? line.quantityOrdered : 0,
-        unitCostUsd: line.unitCostUsd,
+        unitCostPen: line.unitCostPen,
       })),
     );
     if (isReceived) {
@@ -364,7 +363,7 @@ async function createMovements(
         reason: 'SALE',
         quantity: integer(1, Math.max(1, Math.floor(product.stock / 3))),
         counterparty: pick(CUSTOMERS),
-        unitPriceUsd: product.priceUsd,
+        unitPricePen: product.pricePen,
       });
     }
   }
@@ -411,7 +410,7 @@ async function createMovements(
       reason: event.reason,
       quantity: delta,
       stockAfter: current + delta,
-      unitPriceUsd: event.unitPriceUsd ?? null,
+      unitPricePen: event.unitPricePen ?? null,
       counterparty: event.counterparty ?? null,
       referenceType: event.reason === 'IMPORT_RECEIPT' ? 'IMPORT_ORDER' : null,
       referenceId: event.referenceId ?? null,
@@ -497,7 +496,7 @@ try {
     const withoutPrice = await tx
       .select({ id: products.id })
       .from(products)
-      .where(isNull(products.priceUsd));
+      .where(isNull(products.pricePen));
     console.log(
       `Products with commercial data: ${state.size} (without price: ${withoutPrice.length})`,
     );

@@ -11,10 +11,18 @@ import type {
   PricedProduct,
   Product,
   ProductDetail,
+  ProductImportPreview,
+  ProductImportResult,
   StockMovement,
   StockStatusFilter,
   UnitOfMeasure,
 } from '../../shared/models/models';
+
+const formWith = (file: File): FormData => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
 
 export type ProductSortBy = 'code' | 'name' | 'stock' | 'updatedAt' | 'cost' | 'price';
 export type SortDirection = 'asc' | 'desc';
@@ -48,9 +56,9 @@ export interface ProductInput {
   minStock: number;
   reorderQuantity: number;
   location: string | null;
-  costUsd: number | null;
-  priceUsd: number | null;
-  wholesalePriceUsd: number | null;
+  costPen: number | null;
+  pricePen: number | null;
+  wholesalePricePen: number | null;
   wholesaleMinQty: number | null;
   isConsignment: boolean;
   notes: string | null;
@@ -109,6 +117,18 @@ export class ProductsApi {
       params: toHttpParams({ ...filters }),
       responseType: 'blob',
     });
+  }
+
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(`${this.base}/import/template`, { responseType: 'blob' });
+  }
+
+  previewImport(file: File): Observable<ProductImportPreview> {
+    return this.http.post<ProductImportPreview>(`${this.base}/import/preview`, formWith(file));
+  }
+
+  importProducts(file: File): Observable<ProductImportResult> {
+    return this.http.post<ProductImportResult>(`${this.base}/import`, formWith(file));
   }
 
   listCategories(): Observable<Category[]> {

@@ -31,12 +31,12 @@ export class ProductReferences {
   }
 
   assertPricing(prices: {
-    costUsd?: number | null;
-    priceUsd?: number | null;
-    wholesalePriceUsd?: number | null;
+    costPen?: number | null;
+    pricePen?: number | null;
+    wholesalePricePen?: number | null;
   }): void {
     for (const [label, value] of Object.entries(prices)) {
-      if (value != null && value < 0) throw new ValidationError(` cannot be negative`);
+      if (value != null && value < 0) throw new ValidationError(`${label} cannot be negative`);
     }
   }
 }

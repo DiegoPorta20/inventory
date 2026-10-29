@@ -10,6 +10,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { EquipmentModule } from './modules/equipment/equipment.module.js';
 import { ImportsModule } from './modules/imports/imports.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { ProductImportModule } from './modules/product-import/product-import.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { ReorderModule } from './modules/reorder/reorder.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
@@ -33,6 +34,7 @@ import { DomainExceptionFilter } from './shared/presentation/domain-exception.fi
     SuppliersModule,
     EquipmentModule,
     ProductsModule,
+    ProductImportModule,
     InventoryModule,
     ImportsModule,
     ReorderModule,

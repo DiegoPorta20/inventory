@@ -8,6 +8,7 @@ import { DialogFrameComponent } from '../../../shared/ui/dialog-frame.component'
 import { FieldComponent } from '../../../shared/ui/layout.components';
 import { ToastService } from '../../../shared/ui/toast.service';
 import { ImportsApi, type ReceiveLine } from '../imports.api';
+import { DateInputComponent } from '../../../shared/ui/date-input.component';
 
 export interface ReceiveDialogData {
   order: ImportOrderDetail;
@@ -32,7 +33,7 @@ export function openReceiveDialog(dialog: Dialog, data: ReceiveDialogData) {
 
 @Component({
   selector: 'app-receive-import-dialog',
-  imports: [FormsModule, FORMAT_PIPES, DialogFrameComponent, FieldComponent],
+  imports: [DateInputComponent, FormsModule, FORMAT_PIPES, DialogFrameComponent, FieldComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-dialog-frame
@@ -46,7 +47,7 @@ export function openReceiveDialog(dialog: Dialog, data: ReceiveDialogData) {
           for="receive-date"
           hint="Si se deja vacío, se usa la fecha actual."
         >
-          <input id="receive-date" class="input w-auto" type="date" [(ngModel)]="receivedAt" />
+          <ui-date-input class="w-52" inputId="receive-date" [(value)]="receivedAt" />
         </ui-field>
 
         <div class="table-wrap">

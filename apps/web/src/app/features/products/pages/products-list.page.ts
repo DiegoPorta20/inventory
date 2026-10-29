@@ -55,6 +55,9 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Productos" subtitle="Inventario, stock y clasificación.">
+      <a class="btn btn-secondary" routerLink="/products/import">
+        <ui-icon name="upload" [size]="4" /> Importar Excel
+      </a>
       <button
         type="button"
         class="btn btn-secondary"
@@ -75,7 +78,7 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
       <button type="button" class="btn btn-secondary" (click)="registerMovement()">
         <ui-icon name="swap" [size]="4" /> Registrar movimiento
       </button>
-      <a class="btn btn-primary" routerLink="/products/new">
+      <a class="btn btn-primary magnetic" routerLink="/products/new">
         <ui-icon name="plus" [size]="4" /> Nuevo producto
       </a>
     </ui-page-header>
@@ -159,7 +162,7 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                     class="ml-auto flex items-center gap-1"
                     (click)="sortBy('cost')"
                   >
-                    Costo USD {{ sortIcon('cost') }}
+                    Costo S/ {{ sortIcon('cost') }}
                   </button>
                 </th>
                 <th class="num" [attr.aria-sort]="ariaSort('price')">
@@ -168,7 +171,7 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                     class="ml-auto flex items-center gap-1"
                     (click)="sortBy('price')"
                   >
-                    Precio {{ sortIcon('price') }}
+                    Precio S/ (con IGV) {{ sortIcon('price') }}
                   </button>
                 </th>
               </tr>
@@ -219,13 +222,15 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                     {{ product.incomingQty ? (product.incomingQty | quantity) : '—' }}
                   </td>
                   <td><ui-stock-badge [status]="product.stockStatus" /></td>
-                  <td class="num">{{ product.costUsd | usd }}</td>
+                  <td class="num">{{ product.costPen | pen }}</td>
                   <td class="num">
                     @if (product.pricing.retail; as retail) {
                       <span class="block font-medium text-slate-800">{{
                         retail.priceWithIgvPen | pen
                       }}</span>
-                      <span class="block text-xs text-slate-400">{{ retail.priceUsd | usd }}</span>
+                      <span class="block text-xs text-slate-400"
+                        >{{ retail.pricePen | pen }} sin IGV</span
+                      >
                     } @else {
                       —
                     }

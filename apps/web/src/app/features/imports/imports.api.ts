@@ -23,7 +23,7 @@ export interface ImportFilters {
 export interface ImportOrderItemInput {
   productId: number;
   quantityOrdered: number;
-  unitCostUsd: number | null;
+  unitCostPen: number | null;
   notes?: string | null;
 }
 
@@ -33,7 +33,6 @@ export interface ImportOrderInput {
   reference: string | null;
   orderedAt: string | null;
   expectedAt: string | null;
-  exchangeRate: number | null;
   notes: string | null;
   items: ImportOrderItemInput[];
   status?: 'DRAFT' | 'ORDERED';

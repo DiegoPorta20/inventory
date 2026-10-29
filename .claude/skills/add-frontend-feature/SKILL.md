@@ -28,7 +28,7 @@ Register in `app.routes.ts`: `{ path: '<name>', loadChildren: () => import('./fe
 - Forms: typed `FormBuilder.nonNullable`; map server `VALIDATION_ERROR.details` to controls; disable submit while pending; toast on success/failure via `ToastService`.
 - Destructive actions use `ConfirmDialog` (never `window.confirm`).
 - Labels in Spanish; keep texts short and action-oriented ("Guardar", "Registrar salida").
-- Format numbers/dates with the shared pipes (`es-PE` locale): `quantity`, `usd`, `dateTime`.
+- Format numbers/dates with the shared pipes (`es-PE` locale): `quantity`, `pen` (soles), `dateTime`.
 
 ## Checklist
 

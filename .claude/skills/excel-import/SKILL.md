@@ -11,6 +11,7 @@ Two scripts, run in this order (files live in `data/`, git-ignored):
 2. `pnpm db:import-prices [path] [--dry-run] [--create-missing]` – sale price list (`data/Precios*.xlsx`, sheet `APU`): prices, specification, cost center, consignment, wholesale, equipment links. It updates existing products matched by code (tolerating O/D typos for zero) or by unique name; it never touches stock. `--create-missing` only creates unmatched rows that have a price.
 
 Files (`apps/api/src/scripts/excel/`):
+
 - `inventory-sheet.reader.ts` / `price-sheet.reader.ts` – locate columns by header text (robust to shifts), read formula/rich-text cells.
 - `normalize.ts` – code/description/unit normalization (pure, tested).
 - `classifier.ts` – ordered keyword rules → category slug (pure, tested). `taxonomy.ts` – category tree.
@@ -33,8 +34,8 @@ B ITEM · C #IMP · D CODE · E DESCRIPTION · F UNIT · G RECEIVED · H SOLD ·
 
 D CODE · C DESCRIPTION · E SPECIFICATION · F COST CENTER · K PRICE USD WITHOUT IGV · N PRICE S/ WITH IGV (rate in N4) · wholesale block (`PRECIO USD X unidad`, `CANTIDAD POR MES`).
 
-- Section rows (no data) set the context: `Jumbo` → equipment *Jumbo DK0138*, `Yuchai` → also *Motor Yuchai*, `Consignación` → consignment flag.
-- Several rows with the same code → quantity-weighted average price. Wholesale USD has IGV in the file; it is stored without IGV.
+- Section rows (no data) set the context: `Jumbo` → equipment _Jumbo DK0138_, `Yuchai` → also _Motor Yuchai_, `Consignación` → consignment flag.
+- Several rows with the same code → quantity-weighted average price. The legacy price list is in USD (wholesale USD has IGV): `import-prices` converts it to soles with the exchange rate found in the file (default 3.6) and stores prices without IGV.
 - Specification cleanup removes Chinese text and placeholders (`Repuesto`, `/`).
 - Cost center names are normalized (`repuesto Jumbo` → `Repuesto Jumbo`).
 - Stock columns of the price list are ignored on purpose.

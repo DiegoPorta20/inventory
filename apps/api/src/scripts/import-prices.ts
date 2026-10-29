@@ -16,6 +16,8 @@ import { readPriceSheet } from './excel/price-sheet.reader.js';
 import { openScriptContext } from './script-context.js';
 import { ensureEquipment, ensureTaxonomy } from './seed-data.js';
 
+const LEGACY_EXCHANGE_RATE = 3.6;
+
 interface Options {
   file: string;
   dryRun: boolean;
@@ -52,7 +54,12 @@ async function readIgvRate(db: Database): Promise<number> {
   return row ? Number(row.value) : DEFAULT_PRICING.igvRate;
 }
 
-async function applyPlan(db: Database, plan: PricePlan, options: Options): Promise<void> {
+async function applyPlan(
+  db: Database,
+  plan: PricePlan,
+  options: Options,
+  exchangeRate: number,
+): Promise<void> {
   const equipmentIds = await ensureEquipment(db);
   const categoryIds = await ensureTaxonomy(db);
   const costCenterIds = new Map(
@@ -76,9 +83,9 @@ async function applyPlan(db: Database, plan: PricePlan, options: Options): Promi
 
   for (const update of plan.updates) {
     const changes: Partial<typeof products.$inferInsert> = { isConsignment: update.isConsignment };
-    if (update.priceUsd !== null) changes.priceUsd = update.priceUsd;
-    if (update.wholesalePriceUsd !== null) {
-      changes.wholesalePriceUsd = update.wholesalePriceUsd;
+    if (update.pricePen !== null) changes.pricePen = update.pricePen;
+    if (update.wholesalePricePen !== null) {
+      changes.wholesalePricePen = update.wholesalePricePen;
       changes.wholesaleMinQty = update.wholesaleMinQty;
     }
     if (update.specification) changes.specification = update.specification;
@@ -111,7 +118,8 @@ async function applyPlan(db: Database, plan: PricePlan, options: Options): Promi
       unit: normalizeUnit(row.unit),
       categoryId: categoryIds.get(categorySlug) ?? null,
       costCenterId: await costCenterId(row.costCenter),
-      priceUsd: row.priceUsd,
+      pricePen:
+        row.priceUsd === null ? null : Math.round(row.priceUsd * exchangeRate * 10_000) / 10_000,
       stock: 0,
       notes: 'Created from the price list (no stock history)',
     });
@@ -119,15 +127,17 @@ async function applyPlan(db: Database, plan: PricePlan, options: Options): Promi
   for (const item of plan.missing.filter(({ row }) => row.priceUsd !== null)) await create(item);
 }
 
-function report(plan: PricePlan, exchangeRate: number | null): void {
-  const priced = plan.updates.filter((update) => update.priceUsd !== null);
-  console.log(`Exchange rate in file: ${exchangeRate ?? 'n/a'}`);
+function report(plan: PricePlan, exchangeRate: number, fromFile: boolean): void {
+  const priced = plan.updates.filter((update) => update.pricePen !== null);
+  console.log(
+    `The price list is in USD; converting to soles at ${exchangeRate} (${fromFile ? 'rate found in the file' : 'default rate: file has none'})`,
+  );
   console.log(`Matched products: ${plan.updates.length} (${priced.length} with price)`);
   console.log(
     `Products with several different prices (weighted average used): ${plan.updates.filter((u) => u.priceVariants > 1).length}`,
   );
   console.log(
-    `Wholesale prices: ${plan.updates.filter((u) => u.wholesalePriceUsd !== null).length}`,
+    `Wholesale prices: ${plan.updates.filter((u) => u.wholesalePricePen !== null).length}`,
   );
   console.log(`Consignment-only products: ${plan.updates.filter((u) => u.isConsignment).length}`);
   console.log(`Inventory products still without price: ${plan.productsWithoutPrice}`);
@@ -150,13 +160,16 @@ try {
   const inventory = await context.db
     .select({ id: products.id, code: products.code, name: products.name })
     .from(products);
-  const plan = planPrices(sheet.rows, inventory, igvRate);
-  report(plan, sheet.exchangeRate);
+  const exchangeRate = sheet.exchangeRate ?? LEGACY_EXCHANGE_RATE;
+  const plan = planPrices(sheet.rows, inventory, { igvRate, exchangeRate });
+  report(plan, exchangeRate, sheet.exchangeRate !== null);
 
   if (options.dryRun) {
     console.log('Dry run: nothing was written');
   } else {
-    await context.db.transaction((tx) => applyPlan(tx as unknown as Database, plan, options));
+    await context.db.transaction((tx) =>
+      applyPlan(tx as unknown as Database, plan, options, exchangeRate),
+    );
     console.log('Price import completed');
   }
 } finally {

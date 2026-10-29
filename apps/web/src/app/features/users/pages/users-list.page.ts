@@ -31,7 +31,7 @@ import { openUserDialog } from '../user-form.dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Usuarios" subtitle="Cuentas con acceso al sistema.">
-      <button type="button" class="btn btn-primary" (click)="create()">
+      <button type="button" class="btn btn-primary magnetic" (click)="create()">
         <ui-icon name="plus" [size]="4" /> Nuevo usuario
       </button>
     </ui-page-header>

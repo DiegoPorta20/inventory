@@ -20,16 +20,14 @@ describe('PricingService', () => {
     httpMock.verify();
   });
 
-  it('computes the breakdown with the default settings', () => {
+  it('computes the breakdown in soles with the default IGV', () => {
     const breakdown = service.breakdown(100);
-    expect(breakdown.priceUsd).toBe(100);
-    expect(breakdown.igvUsd).toBe(18);
-    expect(breakdown.priceWithIgvUsd).toBe(118);
-    expect(breakdown.priceWithIgvPen).toBe(424.8);
+    expect(breakdown.pricePen).toBe(100);
+    expect(breakdown.igvPen).toBe(18);
+    expect(breakdown.priceWithIgvPen).toBe(118);
   });
 
-  it('round-trips a sol price with IGV back to the stored USD price', () => {
-    const penWithIgv = service.breakdown(100).priceWithIgvPen;
-    expect(service.usdFromPen(penWithIgv)).toBe(100);
+  it('round-trips a price with IGV back to the stored base price', () => {
+    expect(service.priceFromWithIgv(service.breakdown(100).priceWithIgvPen)).toBe(100);
   });
 });

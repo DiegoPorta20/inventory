@@ -4,7 +4,6 @@ import type { Observable } from 'rxjs';
 import type { PricingSettings } from '../../shared/models/models';
 
 export interface PricingSettingsInput {
-  exchangeRate?: number;
   igvRate?: number;
 }
 

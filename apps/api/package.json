@@ -21,6 +21,7 @@
     "db:seed": "tsx src/scripts/seed.ts",
     "db:import-excel": "tsx src/scripts/import-excel.ts",
     "db:import-prices": "tsx src/scripts/import-prices.ts",
+    "db:seed-sample": "tsx src/scripts/seed-sample-products.ts",
     "db:seed-demo": "tsx src/scripts/seed-demo.ts"
   },
   "dependencies": {

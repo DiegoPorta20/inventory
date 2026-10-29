@@ -34,7 +34,7 @@ import { CostCentersApi } from '../cost-centers.api';
       title="Centros de costo"
       subtitle="Líneas de negocio a las que se asignan los productos."
     >
-      <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <button type="button" class="btn btn-primary magnetic" (click)="openCreate()">
         <ui-icon name="plus" [size]="4" /> Nuevo centro de costo
       </button>
     </ui-page-header>

@@ -39,8 +39,8 @@ const summaryColumns = {
   itemCount: itemAggregate(sql`COUNT(*)`),
   totalOrdered: itemAggregate(sql`SUM(${importOrderItems.quantityOrdered})`),
   totalReceived: itemAggregate(sql`SUM(${importOrderItems.quantityReceived})`),
-  totalCostUsd: itemAggregate(
-    sql`SUM(${importOrderItems.quantityOrdered} * ${importOrderItems.unitCostUsd})`,
+  totalCostPen: itemAggregate(
+    sql`SUM(${importOrderItems.quantityOrdered} * ${importOrderItems.unitCostPen})`,
   ),
 };
 
@@ -50,7 +50,7 @@ type SummaryRow = {
   itemCount: number;
   totalOrdered: number;
   totalReceived: number;
-  totalCostUsd: number;
+  totalCostPen: number;
 };
 
 function toSummary(row: SummaryRow): ImportOrderSummary {
@@ -65,7 +65,7 @@ function toSummary(row: SummaryRow): ImportOrderSummary {
     itemCount: row.itemCount,
     totalOrdered: row.totalOrdered,
     totalReceived: row.totalReceived,
-    totalCostUsd: row.totalCostUsd,
+    totalCostPen: row.totalCostPen,
   };
 }
 
@@ -103,7 +103,7 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
         unit: products.unit,
         quantityOrdered: importOrderItems.quantityOrdered,
         quantityReceived: importOrderItems.quantityReceived,
-        unitCostUsd: importOrderItems.unitCostUsd,
+        unitCostPen: importOrderItems.unitCostPen,
         notes: importOrderItems.notes,
       })
       .from(importOrderItems)

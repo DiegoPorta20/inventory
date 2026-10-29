@@ -47,6 +47,8 @@ describe('normalizeCostCenter', () => {
   });
 });
 
+const conversion = { igvRate: 0.18, exchangeRate: 3.6 };
+
 describe('planPrices', () => {
   it('matches rows by code, tolerating O/D typos for zero', () => {
     const plan = planPrices(
@@ -55,7 +57,7 @@ describe('planPrices', () => {
         row({ code: '20306D00354', description: 'Blocking head', priceUsd: 5 }),
       ],
       inventory,
-      0.18,
+      conversion,
     );
     expect(plan.updates.map((update) => update.productId).sort()).toEqual([1, 3]);
     expect(plan.missing).toHaveLength(0);
@@ -65,21 +67,21 @@ describe('planPrices', () => {
     const plan = planPrices(
       [row({ priceUsd: 10, totalQuantity: 1 }), row({ priceUsd: 20, totalQuantity: 3 })],
       inventory,
-      0.18,
+      conversion,
     );
-    expect(plan.updates[0]?.priceUsd).toBe(17.5);
+    expect(plan.updates[0]?.pricePen).toBe(63);
     expect(plan.updates[0]?.priceVariants).toBe(2);
   });
 
   it('marks products found only in consignment sections', () => {
     const consignment = row({ section: 'Repuestos a Consignación Jumbo DK0138' });
-    expect(planPrices([consignment], inventory, 0.18).updates[0]?.isConsignment).toBe(true);
-    expect(planPrices([consignment, row({})], inventory, 0.18).updates[0]?.isConsignment).toBe(
-      false,
-    );
+    expect(planPrices([consignment], inventory, conversion).updates[0]?.isConsignment).toBe(true);
+    expect(
+      planPrices([consignment, row({})], inventory, conversion).updates[0]?.isConsignment,
+    ).toBe(false);
   });
 
-  it('derives wholesale price without IGV and links section equipment', () => {
+  it('converts the wholesale price to soles without IGV and links section equipment', () => {
     const plan = planPrices(
       [
         row({
@@ -93,10 +95,10 @@ describe('planPrices', () => {
         row({}),
       ],
       inventory,
-      0.18,
+      conversion,
     );
     const drill = plan.updates.find((update) => update.productId === 2);
-    expect(drill?.wholesalePriceUsd).toBe(50);
+    expect(drill?.wholesalePricePen).toBe(180);
     expect(drill?.wholesaleMinQty).toBe(24);
     expect(plan.updates.find((update) => update.productId === 1)?.equipmentNames).toEqual([
       'Jumbo DK0138',
@@ -104,7 +106,11 @@ describe('planPrices', () => {
   });
 
   it('reports rows without a matching product', () => {
-    const plan = planPrices([row({ code: '999', description: 'Nuevo repuesto' })], inventory, 0.18);
+    const plan = planPrices(
+      [row({ code: '999', description: 'Nuevo repuesto' })],
+      inventory,
+      conversion,
+    );
     expect(plan.missing).toHaveLength(1);
     expect(plan.productsWithoutPrice).toBe(3);
   });

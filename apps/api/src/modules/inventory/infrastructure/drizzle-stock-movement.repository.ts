@@ -42,7 +42,7 @@ export class DrizzleStockMovementRepository extends StockMovementRepository {
       reason: movement.reason,
       quantity: movement.quantity,
       stockAfter: movement.stockAfter,
-      unitPriceUsd: movement.unitPriceUsd ?? null,
+      unitPricePen: movement.unitPricePen ?? null,
       counterparty: movement.counterparty ?? null,
       referenceType: movement.referenceType ?? null,
       referenceId: movement.referenceId ?? null,

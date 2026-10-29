@@ -34,7 +34,7 @@ import { EquipmentApi } from '../equipment.api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Equipos" subtitle="Máquinas a las que pertenecen los repuestos.">
-      <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <button type="button" class="btn btn-primary magnetic" (click)="openCreate()">
         <ui-icon name="plus" [size]="4" /> Nuevo equipo
       </button>
     </ui-page-header>

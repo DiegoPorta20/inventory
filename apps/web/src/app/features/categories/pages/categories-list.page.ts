@@ -36,7 +36,7 @@ interface CategoryNode extends Category {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Categorías" subtitle="Clasificación de productos en dos niveles.">
-      <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <button type="button" class="btn btn-primary magnetic" (click)="openCreate()">
         <ui-icon name="plus" [size]="4" /> Nueva categoría
       </button>
     </ui-page-header>

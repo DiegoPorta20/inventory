@@ -67,7 +67,7 @@ import { ReorderApi } from '../reorder.api';
       />
       <ui-stat-card
         label="Costo estimado"
-        [value]="summary().estimatedCostUsd | usd"
+        [value]="summary().estimatedCostPen | pen"
         hint="Según costos registrados"
       />
     </div>
@@ -82,18 +82,20 @@ import { ReorderApi } from '../reorder.api';
           />
         </div>
         <select
-          class="input w-auto"
+          class="input input-pill w-auto"
           aria-label="Categoría"
           [value]="filters.value().categoryId"
           (change)="filters.patch({ categoryId: +$any($event.target).value })"
         >
           <option [value]="0">Todas las categorías</option>
           @for (c of categoryOptions(); track c.id) {
-            <option [value]="c.id" [class.opt-root]="c.depth === 0" [class.opt-child]="c.depth > 0">{{ c.label }}</option>
+            <option [value]="c.id" [class.opt-root]="c.depth === 0" [class.opt-child]="c.depth > 0">
+              {{ c.label }}
+            </option>
           }
         </select>
         <select
-          class="input w-auto"
+          class="input input-pill w-auto"
           aria-label="Equipo"
           [value]="filters.value().equipmentId"
           (change)="filters.patch({ equipmentId: +$any($event.target).value })"
@@ -208,8 +210,8 @@ import { ReorderApi } from '../reorder.api';
                       (input)="setQty(row.product.id, $any($event.target).value)"
                     />
                   </td>
-                  <td class="num text-slate-600">{{ row.product.costUsd | usd: true }}</td>
-                  <td class="num font-medium">{{ estimated(row) | usd }}</td>
+                  <td class="num text-slate-600">{{ row.product.costPen | pen: true }}</td>
+                  <td class="num font-medium">{{ estimated(row) | pen }}</td>
                 </tr>
               }
             </tbody>
@@ -218,7 +220,7 @@ import { ReorderApi } from '../reorder.api';
                 <td colspan="6"></td>
                 <td class="num">Total selección</td>
                 <td></td>
-                <td class="num">{{ selectedCost() | usd }}</td>
+                <td class="num">{{ selectedCost() | pen }}</td>
               </tr>
             </tfoot>
           </table>
@@ -255,15 +257,13 @@ export class ReorderPage {
     this.report.hasValue() ? this.report.value().items : [],
   );
   protected readonly summary = computed(
-    () => this.report.value()?.summary ?? { total: 0, outOfStock: 0, estimatedCostUsd: 0 },
+    () => this.report.value()?.summary ?? { total: 0, outOfStock: 0, estimatedCostPen: 0 },
   );
   protected readonly errorText = computed(() => errorMessage(this.report.error()));
 
   private readonly categoriesResource = rxResource({ stream: () => this.api.categories() });
   protected readonly categoryOptions = computed(() =>
-    buildCategoryOptions(
-      this.categoriesResource.hasValue() ? this.categoriesResource.value() : [],
-    ),
+    buildCategoryOptions(this.categoriesResource.hasValue() ? this.categoriesResource.value() : []),
   );
 
   private readonly equipmentResource = rxResource({ stream: () => this.equipmentApi.list() });
@@ -297,7 +297,7 @@ export class ReorderPage {
   }
 
   protected estimated(row: ReorderSuggestion): number {
-    return (row.product.costUsd ?? 0) * this.qtyOf(row);
+    return (row.product.costPen ?? 0) * this.qtyOf(row);
   }
 
   protected setQty(productId: number, value: string): void {
@@ -354,7 +354,7 @@ export class ReorderPage {
         name: row.product.name,
         unit: row.product.unit,
         quantityOrdered: Math.max(1, this.qtyOf(row)),
-        unitCostUsd: row.product.costUsd,
+        unitCostPen: row.product.costPen,
       }));
     if (items.length === 0) return;
     const state: ImportNavigationState = { prefill: { items } };

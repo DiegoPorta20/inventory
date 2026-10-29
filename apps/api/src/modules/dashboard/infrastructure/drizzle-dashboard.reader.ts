@@ -32,11 +32,11 @@ export class DrizzleDashboardReader extends DashboardReader {
       .select({
         activeProducts: number(sql`COUNT(*)`),
         totalUnits: number(sql`COALESCE(SUM(${products.stock}), 0)`),
-        inventoryValueUsd: number(sql`COALESCE(SUM(${products.stock} * ${products.costUsd}), 0)`),
-        inventoryValueAtPriceUsd: number(
-          sql`COALESCE(SUM(${products.stock} * ${products.priceUsd}), 0)`,
+        inventoryValuePen: number(sql`COALESCE(SUM(${products.stock} * ${products.costPen}), 0)`),
+        inventoryValueAtPricePen: number(
+          sql`COALESCE(SUM(${products.stock} * ${products.pricePen}), 0)`,
         ),
-        withoutPrice: number(sql`COALESCE(SUM(${products.priceUsd} IS NULL), 0)`),
+        withoutPrice: number(sql`COALESCE(SUM(${products.pricePen} IS NULL), 0)`),
         consignmentUnits: number(
           sql`COALESCE(SUM(CASE WHEN ${products.isConsignment} THEN ${products.stock} ELSE 0 END), 0)`,
         ),
@@ -65,8 +65,8 @@ export class DrizzleDashboardReader extends DashboardReader {
     return {
       activeProducts: stock?.activeProducts ?? 0,
       totalUnits: stock?.totalUnits ?? 0,
-      inventoryValueUsd: stock?.inventoryValueUsd ?? 0,
-      inventoryValueAtPriceUsd: stock?.inventoryValueAtPriceUsd ?? 0,
+      inventoryValuePen: stock?.inventoryValuePen ?? 0,
+      inventoryValueAtPricePen: stock?.inventoryValueAtPricePen ?? 0,
       withoutPrice: stock?.withoutPrice ?? 0,
       consignmentUnits: stock?.consignmentUnits ?? 0,
       outOfStock: stock?.outOfStock ?? 0,
@@ -84,7 +84,7 @@ export class DrizzleDashboardReader extends DashboardReader {
           categoryId: products.categoryId,
           products: number(sql`COUNT(*)`),
           units: number(sql`COALESCE(SUM(${products.stock}), 0)`),
-          valueUsd: number(sql`COALESCE(SUM(${products.stock} * ${products.costUsd}), 0)`),
+          valuePen: number(sql`COALESCE(SUM(${products.stock} * ${products.costPen}), 0)`),
         })
         .from(products)
         .where(eq(products.isActive, true))
@@ -105,11 +105,11 @@ export class DrizzleDashboardReader extends DashboardReader {
         name: rootName,
         products: 0,
         units: 0,
-        valueUsd: 0,
+        valuePen: 0,
       };
       current.products += row.products;
       current.units += row.units;
-      current.valueUsd += row.valueUsd;
+      current.valuePen += row.valuePen;
       rolled.set(rootId, current);
     }
     return [...rolled.values()].sort((a, b) => b.units - a.units);

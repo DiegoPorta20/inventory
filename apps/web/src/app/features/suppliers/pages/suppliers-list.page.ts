@@ -35,7 +35,7 @@ import { SuppliersApi } from '../suppliers.api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Proveedores" subtitle="Empresas que surten las importaciones.">
-      <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <button type="button" class="btn btn-primary magnetic" (click)="openCreate()">
         <ui-icon name="plus" [size]="4" /> Nuevo proveedor
       </button>
     </ui-page-header>
@@ -50,7 +50,7 @@ import { SuppliersApi } from '../suppliers.api';
           />
         </div>
         <select
-          class="input w-auto"
+          class="input input-pill w-auto"
           aria-label="Estado"
           [value]="filters.value().status"
           (change)="filters.patch({ status: $any($event.target).value })"

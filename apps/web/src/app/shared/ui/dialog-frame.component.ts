@@ -9,17 +9,18 @@ import { IconComponent } from './icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section
-      class="flex max-h-[calc(100vh-2rem)] flex-col rounded-xl bg-white shadow-xl"
+      class="pop-in flex max-h-[calc(100vh-2rem)] flex-col rounded-3xl border bg-white shadow-xl"
+      style="border-color: var(--line); transform-origin: center top"
       [style.width]="'min(' + width() + ', calc(100vw - 2rem))'"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="title()"
     >
-      <header class="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+      <header class="flex items-start justify-between gap-4 px-6 pt-5 pb-2">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">{{ title() }}</h2>
+          <h2 class="text-xl font-bold tracking-tight text-slate-900">{{ title() }}</h2>
           @if (subtitle()) {
-            <p class="mt-0.5 text-sm text-slate-500">{{ subtitle() }}</p>
+            <p class="mt-1 text-[13.5px] text-slate-500">{{ subtitle() }}</p>
           }
         </div>
         <button
@@ -31,8 +32,8 @@ import { IconComponent } from './icon.component';
           <ui-icon name="x" [size]="5" />
         </button>
       </header>
-      <div class="overflow-y-auto px-5 py-4"><ng-content /></div>
-      <footer class="flex justify-end gap-2 border-t border-slate-100 px-5 py-3 empty:hidden">
+      <div class="overflow-y-auto px-6 py-3"><ng-content /></div>
+      <footer class="flex justify-end gap-2.5 px-6 pt-2 pb-5 empty:hidden">
         <ng-content select="[dialog-actions]" />
       </footer>
     </section>

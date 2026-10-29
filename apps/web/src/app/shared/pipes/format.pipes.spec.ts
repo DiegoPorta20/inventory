@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatQuantity, formatUsd } from './format.pipes';
+import { formatDate, formatPen, formatQuantity } from './format.pipes';
 
 describe('format helpers', () => {
   it('formats quantities with thousands separators and a placeholder for null', () => {
@@ -7,10 +7,10 @@ describe('format helpers', () => {
     expect(formatQuantity(null)).toBe('—');
   });
 
-  it('formats USD with two decimals by default and four when precise', () => {
-    expect(formatUsd(12.5)).toContain('12.50');
-    expect(formatUsd(0.12345, true)).toContain('0.1235');
-    expect(formatUsd(undefined)).toBe('—');
+  it('formats soles with two decimals by default and four when precise', () => {
+    expect(formatPen(12.5)).toBe('S/ 12.50');
+    expect(formatPen(0.12345, true)).toBe('S/ 0.1235');
+    expect(formatPen(undefined)).toBe('—');
   });
 
   it('formats date-only strings without shifting the day', () => {

@@ -1,14 +1,14 @@
 export interface PricingSettings {
-  exchangeRate: number;
   igvRate: number;
 }
 
-export const DEFAULT_PRICING: PricingSettings = { exchangeRate: 3.6, igvRate: 0.18 };
+export const DEFAULT_PRICING: PricingSettings = { igvRate: 0.18 };
 
+/** All amounts are in soles (PEN). */
 export interface PriceBreakdown {
-  priceUsd: number;
-  igvUsd: number;
-  priceWithIgvUsd: number;
+  /** Price without IGV (the stored base price). */
+  pricePen: number;
+  igvPen: number;
   priceWithIgvPen: number;
 }
 
@@ -23,45 +23,44 @@ const round = (value: number, decimals: number): number => {
   return Math.round(value * factor) / factor;
 };
 
-/** `priceUsd` is the sale price in USD without IGV (the base price of the price list). */
-export function priceBreakdown(priceUsd: number, settings: PricingSettings): PriceBreakdown {
-  const withIgv = priceUsd * (1 + settings.igvRate);
+/** `pricePen` is the sale price in soles without IGV (the base price of the price list). */
+export function priceBreakdown(pricePen: number, settings: PricingSettings): PriceBreakdown {
   return {
-    priceUsd: round(priceUsd, 4),
-    igvUsd: round(priceUsd * settings.igvRate, 4),
-    priceWithIgvUsd: round(withIgv, 4),
-    priceWithIgvPen: round(withIgv * settings.exchangeRate, 2),
+    pricePen: round(pricePen, 4),
+    igvPen: round(pricePen * settings.igvRate, 4),
+    priceWithIgvPen: round(pricePen * (1 + settings.igvRate), 2),
   };
 }
 
-export function priceUsdFromPen(penWithIgv: number, settings: PricingSettings): number {
-  return round(penWithIgv / settings.exchangeRate / (1 + settings.igvRate), 4);
+/** Base price (without IGV) from a price that already includes IGV. */
+export function pricePenFromWithIgv(priceWithIgvPen: number, settings: PricingSettings): number {
+  return round(priceWithIgvPen / (1 + settings.igvRate), 4);
 }
 
 /** Gross margin over the sale price, in percent. Null when price or cost is unknown. */
-export function marginPercent(priceUsd: number | null, costUsd: number | null): number | null {
-  if (priceUsd == null || costUsd == null || priceUsd <= 0) return null;
-  return round(((priceUsd - costUsd) / priceUsd) * 100, 1);
+export function marginPercent(pricePen: number | null, costPen: number | null): number | null {
+  if (pricePen == null || costPen == null || pricePen <= 0) return null;
+  return round(((pricePen - costPen) / pricePen) * 100, 1);
 }
 
 export function productPricing(
   product: {
-    priceUsd: number | null;
-    costUsd: number | null;
-    wholesalePriceUsd: number | null;
+    pricePen: number | null;
+    costPen: number | null;
+    wholesalePricePen: number | null;
     wholesaleMinQty: number | null;
   },
   settings: PricingSettings,
 ): ProductPricing {
   return {
-    retail: product.priceUsd == null ? null : priceBreakdown(product.priceUsd, settings),
+    retail: product.pricePen == null ? null : priceBreakdown(product.pricePen, settings),
     wholesale:
-      product.wholesalePriceUsd == null
+      product.wholesalePricePen == null
         ? null
         : {
-            ...priceBreakdown(product.wholesalePriceUsd, settings),
+            ...priceBreakdown(product.wholesalePricePen, settings),
             minQty: product.wholesaleMinQty,
           },
-    marginPercent: marginPercent(product.priceUsd, product.costUsd),
+    marginPercent: marginPercent(product.pricePen, product.costPen),
   };
 }

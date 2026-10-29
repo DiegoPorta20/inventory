@@ -2,7 +2,8 @@
 
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    'Urbanist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   /* Brand palette taken from wyminerperu.com: navy #273f85 (logo), cyan #01abce, ink #081026, tint #e2e9fc. */
   --color-brand-50: #f0f4fd;
   --color-brand-100: #e2e9fc;
@@ -20,17 +21,54 @@
   --color-accent-400: #27c3e0;
   --color-accent-500: #01abce;
   --color-accent-600: #0190ae;
+
+  /* Surfaces float on a tinted page: "white" is a hair off-white, like the reference design. */
+  --color-white: #fcfdfe;
+
+  /* Shape scale: controls 12px, tiles 16px, cards 22px, modals 24px. */
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.375rem;
+  --radius-3xl: 1.5rem;
+
+  /* Soft, low-opacity shadows with a long, offset blur instead of hard drop shadows. */
+  --shadow-xs: 0 1px 2px rgb(16 26 56 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(16 26 56 / 0.05), 0 16px 36px -26px rgb(16 26 56 / 0.28);
+  --shadow-md: 0 1px 2px rgb(16 26 56 / 0.06), 0 18px 40px -24px rgb(16 26 56 / 0.34);
+  --shadow-lg: 0 2px 6px rgb(16 26 56 / 0.07), 0 22px 48px -22px rgb(16 26 56 / 0.36);
+  --shadow-xl: 0 2px 8px rgb(16 26 56 / 0.09), 0 26px 60px -20px rgb(16 26 56 / 0.34);
+
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root {
+  --page: #eceff5;
+  --line: rgb(16 26 56 / 0.09);
+  --line-strong: rgb(16 26 56 / 0.16);
+  --well: rgb(16 26 56 / 0.06);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --r-card: 22px;
+  --side: var(--color-brand-900);
+  --side-dim: rgb(233 238 252 / 0.62);
+  --side-hover: rgb(255 255 255 / 0.08);
+  --side-pill: var(--color-brand-100);
+  --gutter: clamp(16px, 1.8vw, 28px);
 }
 
 @layer base {
   html {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    background: var(--page);
+    @apply text-slate-900 antialiased;
   }
   body {
     @apply min-h-screen font-sans text-sm;
+    font-variant-numeric: tabular-nums;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+  ::selection {
+    background: rgb(1 171 206 / 0.28);
   }
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']) {
@@ -40,35 +78,80 @@
 
 @layer components {
   .btn {
-    @apply inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent px-3.5 text-sm font-medium whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-transparent px-4 text-[13.5px] font-semibold whitespace-nowrap select-none disabled:pointer-events-none disabled:opacity-50;
+    transition:
+      background-color 0.25s var(--ease),
+      border-color 0.25s var(--ease),
+      color 0.25s var(--ease),
+      box-shadow 0.25s var(--ease),
+      scale 0.2s var(--ease),
+      translate 0.5s var(--ease);
+  }
+  .btn:active:not(:disabled) {
+    scale: 0.97;
   }
   .btn-sm {
-    @apply h-8 px-2.5 text-xs;
+    @apply h-[34px] px-3.5 text-xs;
   }
   .btn-icon {
-    @apply h-9 w-9 px-0;
+    @apply h-10 w-10 px-0;
   }
   .btn-primary {
-    @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800;
+    @apply bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800;
   }
   .btn-secondary {
-    @apply border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100;
+    @apply bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100;
+    border-color: var(--line-strong);
   }
   .btn-ghost {
-    @apply text-slate-600 hover:bg-slate-100 active:bg-slate-200;
+    @apply text-slate-600;
+  }
+  .btn-ghost:hover {
+    background: var(--well);
+  }
+  .btn-ghost:active {
+    background: rgb(16 26 56 / 0.1);
   }
   .btn-danger {
-    @apply bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:bg-rose-800;
+    @apply bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800;
   }
 
   .label {
-    @apply mb-1 block text-xs font-medium text-slate-600;
+    @apply mb-1.5 block text-xs font-semibold text-slate-600;
   }
   .input {
-    @apply block h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-2 focus:-outline-offset-1 focus:outline-brand-500 disabled:bg-slate-100 disabled:text-slate-500;
+    @apply block h-10 w-full rounded-xl border bg-slate-50 px-3.5 text-[13.5px] text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500;
+    border-color: var(--line-strong);
+    transition:
+      border-color 0.2s var(--ease),
+      box-shadow 0.2s var(--ease),
+      background-color 0.2s var(--ease);
+  }
+  .input:hover:not(:disabled):not(:focus) {
+    border-color: rgb(16 26 56 / 0.28);
+  }
+  .input:focus {
+    box-shadow: 0 0 0 3px rgb(58 88 173 / 0.18);
+  }
+  /* Search boxes and toolbar filters are pills; form fields keep the 12px control radius. */
+  .input-pill {
+    @apply rounded-full px-4;
+  }
+
+  /* Cards that open something rise slightly under the pointer. */
+  .card-lift {
+    transition:
+      translate 0.45s var(--ease),
+      box-shadow 0.45s var(--ease),
+      border-color 0.3s var(--ease);
+  }
+  .card-lift:hover {
+    translate: 0 -3px;
+    box-shadow: var(--shadow-lg);
+    border-color: var(--line-strong);
   }
   textarea.input {
-    @apply h-auto min-h-20 py-2;
+    @apply h-auto min-h-24 py-2.5 leading-snug;
   }
   select.input {
     @apply pr-8;
@@ -77,7 +160,7 @@
     @apply py-1;
   }
   .data-table-compact .btn-icon {
-    @apply h-7 w-7;
+    @apply h-8 w-8;
   }
   .data-table-compact tbody tr.row-root > td {
     @apply bg-slate-50/80;
@@ -87,74 +170,199 @@
   }
   .input.ng-invalid.ng-touched,
   .input[aria-invalid='true'] {
-    @apply border-rose-400 focus:border-rose-500 focus:outline-rose-500;
+    @apply border-rose-400 focus:border-rose-500;
+  }
+  .input.ng-invalid.ng-touched:focus,
+  .input[aria-invalid='true']:focus {
+    box-shadow: 0 0 0 3px rgb(225 29 72 / 0.14);
   }
   .field-error {
-    @apply mt-1 text-xs text-rose-600;
+    @apply mt-1.5 text-xs font-semibold text-rose-600;
   }
 
   .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+    @apply border bg-white shadow-sm;
+    border-radius: var(--r-card);
+    border-color: var(--line);
   }
   .card-header {
-    @apply flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3;
+    @apply flex items-center justify-between gap-3 px-5 py-4;
+    border-bottom: 1px solid var(--line);
   }
   .card-title {
-    @apply text-sm font-semibold text-slate-800;
+    @apply text-[15px] font-semibold tracking-tight text-slate-900;
   }
 
   .table-wrap {
     @apply overflow-x-auto;
   }
   .data-table {
-    @apply w-full border-collapse text-left text-sm;
+    @apply w-full border-collapse text-left text-[13.5px];
   }
   .data-table thead th {
-    @apply sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold tracking-wide text-slate-500 uppercase whitespace-nowrap;
+    @apply sticky top-0 z-10 bg-white/90 px-3 py-3 text-xs font-semibold whitespace-nowrap text-slate-500 backdrop-blur;
+    border-bottom: 1px solid var(--line);
   }
   .data-table thead th button {
-    @apply font-[inherit] tracking-[inherit] uppercase;
+    @apply font-[inherit];
   }
   .data-table tbody td {
-    @apply border-b border-slate-100 px-3 py-2.5 align-middle text-slate-700;
+    @apply px-3 py-3 align-middle text-slate-700;
+    border-bottom: 1px solid var(--line);
+  }
+  /* Tables sit flush inside rounded cards: round the header's outer corners to match. */
+  .data-table thead tr:first-child th:first-child {
+    border-top-left-radius: var(--r-card);
+  }
+  .data-table thead tr:first-child th:last-child {
+    border-top-right-radius: var(--r-card);
+  }
+  .data-table :is(th, td):first-child {
+    padding-left: 1.25rem;
+  }
+  .data-table :is(th, td):last-child {
+    padding-right: 1.25rem;
   }
   .data-table tbody tr:last-child td {
     @apply border-b-0;
   }
+  .data-table tbody tr td {
+    transition: background-color 0.2s var(--ease);
+  }
+  .data-table tbody tr:hover td {
+    background: rgb(16 26 56 / 0.03);
+  }
   .data-table tbody tr.row-link {
-    @apply cursor-pointer transition-colors hover:bg-slate-50;
+    @apply cursor-pointer;
   }
   .num {
     @apply text-right tabular-nums;
   }
 
+  /* Soft status pill: tinted background (14%) of its own text colour, with a leading dot. */
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap;
+    --t: var(--color-slate-600);
+    @apply inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap;
+    color: var(--t);
+    background: color-mix(in srgb, var(--t) 14%, transparent);
+  }
+  .badge:not(:has(ui-icon))::before {
+    content: '';
+    @apply size-1.5 rounded-full bg-current;
   }
   .badge-neutral {
-    @apply bg-slate-100 text-slate-700;
+    --t: var(--color-slate-600);
   }
   .badge-success {
-    @apply bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/15 ring-inset;
+    --t: var(--color-emerald-700);
   }
   .badge-warning {
-    @apply bg-amber-50 text-amber-800 ring-1 ring-amber-600/20 ring-inset;
+    --t: var(--color-amber-700);
   }
   .badge-danger {
-    @apply bg-rose-50 text-rose-700 ring-1 ring-rose-600/15 ring-inset;
+    --t: var(--color-rose-700);
   }
   .badge-info {
-    @apply bg-sky-50 text-sky-700 ring-1 ring-sky-600/15 ring-inset;
+    --t: var(--color-sky-700);
   }
   .badge-brand {
-    @apply bg-brand-50 text-brand-700 ring-1 ring-brand-600/15 ring-inset;
+    --t: var(--color-brand-600);
   }
 
   .page-title {
-    @apply text-xl font-semibold tracking-tight text-slate-900;
+    @apply font-semibold text-slate-900;
+    font-size: clamp(26px, 2.4vw, 34px);
+    line-height: 1.06;
+    letter-spacing: -0.025em;
   }
   .section-title {
-    @apply text-xs font-semibold tracking-wide text-slate-500 uppercase;
+    @apply text-xs font-bold tracking-wide text-slate-500 uppercase;
+  }
+
+  /* Calendar / date picker */
+  .date-icon-btn {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:text-brand-600 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .date-icon-btn:hover {
+    background: var(--well);
+  }
+  .cal-nav {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-full text-base leading-none text-slate-500 transition-colors hover:text-slate-800;
+  }
+  .cal-nav:hover {
+    background: var(--well);
+  }
+  .cal-day {
+    @apply inline-flex h-9 w-full items-center justify-center rounded-xl text-sm text-slate-700 tabular-nums hover:bg-brand-50 hover:text-brand-700 disabled:pointer-events-none disabled:text-slate-300;
+    transition:
+      background-color 0.2s var(--ease),
+      color 0.2s var(--ease);
+  }
+  .cal-day-outside {
+    @apply text-slate-400;
+  }
+  .cal-day-today {
+    @apply font-semibold text-brand-700 ring-1 ring-brand-300 ring-inset;
+  }
+  .cal-day-range {
+    @apply rounded-none bg-brand-50 text-brand-800;
+  }
+  .cal-day-edge {
+    @apply rounded-xl bg-brand-600 font-semibold text-white ring-0 hover:bg-brand-700 hover:text-white;
+  }
+
+  /* Floating sidebar */
+  .side-panel {
+    @apply flex h-full flex-col text-white;
+    background: var(--side);
+    border-radius: 26px;
+    padding: 18px 14px 14px;
+    box-shadow: 0 24px 50px -30px rgb(8 16 38 / 0.6);
+  }
+  .nav-group {
+    @apply px-3 pt-4 pb-1.5 text-[11px] font-bold tracking-[0.08em] uppercase;
+    color: var(--side-dim);
+  }
+  .nav-track {
+    @apply relative;
+  }
+  .nav-pill {
+    @apply pointer-events-none absolute inset-x-0 top-0 z-0;
+    background: var(--side-pill);
+    border-radius: 14px;
+    transition:
+      transform 0.55s var(--ease),
+      height 0.55s var(--ease),
+      opacity 0.3s var(--ease);
+  }
+  .nav-item {
+    @apply relative z-[1] flex h-11 items-center gap-3 px-3 text-[13.5px] font-semibold;
+    color: var(--side-dim);
+    border-radius: 14px;
+    transition:
+      color 0.3s var(--ease),
+      background-color 0.25s var(--ease);
+  }
+  .nav-item:hover {
+    color: #fff;
+    background: var(--side-hover);
+  }
+  .nav-item.is-on {
+    color: var(--color-brand-900);
+    background: transparent;
+  }
+  .nav-item:focus-visible {
+    outline-color: var(--color-accent-400);
+  }
+
+  .menu-item {
+    @apply flex h-10 items-center gap-2.5 rounded-xl px-3 text-left text-[13.5px] font-semibold text-slate-700;
+    transition: background-color 0.2s var(--ease);
+  }
+  .menu-item:hover,
+  .menu-item:focus-visible {
+    background: var(--well);
+    outline: none;
   }
 }
 
@@ -168,14 +376,11 @@
     appearance: base-select;
   }
   select.input {
-    @apply inline-flex cursor-pointer items-center justify-between gap-2 pr-2.5;
-  }
-  select.input:hover:not(:disabled) {
-    border-color: var(--color-slate-400);
+    @apply inline-flex cursor-pointer items-center justify-between gap-2 pr-3;
   }
   select.input::picker-icon {
     color: var(--color-slate-400);
-    transition: rotate 0.15s ease;
+    transition: rotate 0.25s var(--ease);
   }
   select.input:open::picker-icon {
     rotate: 180deg;
@@ -188,15 +393,13 @@
     box-sizing: border-box;
     min-width: anchor-size(width);
     max-height: min(20rem, 60vh);
-    margin-block: 4px;
-    padding: 4px;
+    margin-block: 6px;
+    padding: 6px;
     overflow-y: auto;
-    border: 1px solid var(--color-slate-200);
-    border-radius: 0.75rem;
-    background: #fff;
-    box-shadow:
-      0 10px 24px -6px rgb(8 16 38 / 0.18),
-      0 2px 6px rgb(8 16 38 / 0.06);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: var(--color-white);
+    box-shadow: var(--shadow-xl);
     scrollbar-width: thin;
     scrollbar-color: var(--color-slate-300) transparent;
   }
@@ -205,23 +408,22 @@
     align-items: center;
     gap: 0.5rem;
     min-height: 0;
-    padding: 5px 10px;
-    border-radius: 0.5rem;
+    padding: 6px 10px;
+    border-radius: 0.625rem;
     font-size: 0.8125rem;
+    font-weight: 600;
     line-height: 1.25rem;
     color: var(--color-slate-700);
     cursor: pointer;
   }
   select.input option:hover,
   select.input option:focus-visible {
-    background: var(--color-brand-50);
-    color: var(--color-brand-700);
+    background: var(--well);
     outline: none;
   }
   select.input option:checked {
     background: var(--color-brand-100);
     color: var(--color-brand-800);
-    font-weight: 600;
   }
   select.input option::checkmark {
     order: 1;
@@ -235,19 +437,110 @@
 }
 /* Category hierarchy inside <option>: roots bold, children indented. */
 select.input option.opt-root {
-  font-weight: 600;
+  font-weight: 700;
 }
 select.input option.opt-child {
   padding-left: 1.5rem;
+  font-weight: 500;
 }
 
+/* ───────────────────────────── Motion ───────────────────────────── */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 8px;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
 @keyframes skeleton-pulse {
   50% {
     opacity: 0.5;
   }
 }
+
+/* `backwards` fill: the element returns to its own style once the entrance ends. */
+.pop-in {
+  animation: pop 0.35s var(--ease) backwards;
+  transform-origin: top left;
+}
+.meter-fill {
+  transform-origin: left center;
+  animation: grow-x 0.9s var(--ease) 0.25s backwards;
+}
+
+/* Route entrance: the page fades in, its cards and table rows rise in a short stagger. */
+#main > :not(router-outlet) {
+  animation: fade 0.3s var(--ease) backwards;
+}
+#main :is(.card, .reveal) {
+  animation: rise 0.6s var(--ease) backwards;
+}
+#main :is(.card, .reveal):nth-child(2) {
+  animation-delay: 0.05s;
+}
+#main :is(.card, .reveal):nth-child(3) {
+  animation-delay: 0.1s;
+}
+#main :is(.card, .reveal):nth-child(4) {
+  animation-delay: 0.15s;
+}
+#main :is(.card, .reveal):nth-child(5) {
+  animation-delay: 0.2s;
+}
+#main :is(.card, .reveal):nth-child(n + 6) {
+  animation-delay: 0.25s;
+}
+.data-table tbody tr {
+  animation: rise 0.5s var(--ease) backwards;
+}
+.data-table tbody tr:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.data-table tbody tr:nth-child(2) {
+  animation-delay: 0.07s;
+}
+.data-table tbody tr:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.data-table tbody tr:nth-child(4) {
+  animation-delay: 0.13s;
+}
+.data-table tbody tr:nth-child(5) {
+  animation-delay: 0.16s;
+}
+.data-table tbody tr:nth-child(6) {
+  animation-delay: 0.19s;
+}
+.data-table tbody tr:nth-child(7) {
+  animation-delay: 0.22s;
+}
+.data-table tbody tr:nth-child(8) {
+  animation-delay: 0.25s;
+}
+.data-table tbody tr:nth-child(n + 9) {
+  animation-delay: 0.28s;
+}
+
 .skeleton {
-  @apply rounded bg-slate-200;
+  @apply rounded-md;
+  background: var(--well);
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 
@@ -256,9 +549,12 @@ select.input option.opt-child {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ───────────────────────────── Overlays (CDK) ───────────────────────────── */
 
 .cdk-overlay-container {
   position: fixed;
@@ -283,5 +579,7 @@ select.input option.opt-child {
 }
 .cdk-overlay-backdrop {
   pointer-events: auto;
-  background: rgb(15 23 42 / 0.45);
+  background: rgb(16 26 56 / 0.4);
+  backdrop-filter: blur(3px);
+  animation: fade 0.3s var(--ease) backwards;
 }

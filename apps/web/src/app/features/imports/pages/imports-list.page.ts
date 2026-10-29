@@ -18,10 +18,12 @@ import {
 import { useQueryFilters } from '../../../shared/util/query-filters';
 import { SuppliersApi } from '../../suppliers/suppliers.api';
 import { ImportsApi } from '../imports.api';
+import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.component';
 
 @Component({
   selector: 'app-imports-list-page',
   imports: [
+    DateRangeFilterComponent,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -36,7 +38,7 @@ import { ImportsApi } from '../imports.api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Importaciones" subtitle="Órdenes de compra y envíos de los proveedores.">
-      <a class="btn btn-primary" routerLink="/imports/new">
+      <a class="btn btn-primary magnetic" routerLink="/imports/new">
         <ui-icon name="plus" [size]="4" /> Nueva importación
       </a>
     </ui-page-header>
@@ -51,7 +53,7 @@ import { ImportsApi } from '../imports.api';
           />
         </div>
         <select
-          class="input w-auto"
+          class="input input-pill w-auto"
           aria-label="Estado"
           [value]="filters.value().status"
           (change)="filters.patch({ status: $any($event.target).value })"
@@ -62,7 +64,7 @@ import { ImportsApi } from '../imports.api';
           }
         </select>
         <select
-          class="input w-auto"
+          class="input input-pill w-auto"
           aria-label="Proveedor"
           [value]="filters.value().supplierId"
           (change)="filters.patch({ supplierId: +$any($event.target).value })"
@@ -72,24 +74,15 @@ import { ImportsApi } from '../imports.api';
             <option [value]="sup.id">{{ sup.name }}</option>
           }
         </select>
-        <label class="flex flex-col text-xs text-slate-500">
-          Desde
-          <input
-            class="input w-auto"
-            type="date"
-            [value]="filters.value().from"
-            (change)="filters.patch({ from: $any($event.target).value })"
+        <div class="flex w-64 flex-col text-xs text-slate-500">
+          <span class="mb-1">Fechas</span>
+          <ui-date-range
+            ariaLabel="Fechas de la importación"
+            [from]="filters.value().from"
+            [to]="filters.value().to"
+            (rangeChange)="filters.patch($event)"
           />
-        </label>
-        <label class="flex flex-col text-xs text-slate-500">
-          Hasta
-          <input
-            class="input w-auto"
-            type="date"
-            [value]="filters.value().to"
-            (change)="filters.patch({ to: $any($event.target).value })"
-          />
-        </label>
+        </div>
         @if (filters.activeCount() > 0) {
           <button type="button" class="btn btn-ghost btn-sm" (click)="filters.reset()">
             Limpiar
@@ -129,7 +122,7 @@ import { ImportsApi } from '../imports.api';
                   <th>Recibido</th>
                   <th class="num">Líneas</th>
                   <th class="num">Ped. / Rec.</th>
-                  <th class="num">Costo USD</th>
+                  <th class="num">Costo S/</th>
                 </tr>
               </thead>
               <tbody>
@@ -147,7 +140,7 @@ import { ImportsApi } from '../imports.api';
                     <td class="num">
                       {{ o.totalOrdered | quantity }} / {{ o.totalReceived | quantity }}
                     </td>
-                    <td class="num font-medium">{{ o.totalCostUsd | usd }}</td>
+                    <td class="num font-medium">{{ o.totalCostPen | pen }}</td>
                   </tr>
                 }
               </tbody>

@@ -14,7 +14,7 @@ export interface RegisterStockMovementInput {
   type: MovementType;
   reason: MovementReason;
   quantity: number;
-  unitPriceUsd?: number | null;
+  unitPricePen?: number | null;
   counterparty?: string | null;
   note?: string | null;
   occurredAt?: Date;
@@ -34,7 +34,7 @@ export class RegisterStockMovement {
       type: input.type,
       reason: input.reason,
       delta: signedDelta(input.type, input.quantity),
-      unitPriceUsd: input.unitPriceUsd ?? null,
+      unitPricePen: input.unitPricePen ?? null,
       counterparty: input.counterparty ?? null,
       note: input.note ?? null,
       occurredAt: input.occurredAt,

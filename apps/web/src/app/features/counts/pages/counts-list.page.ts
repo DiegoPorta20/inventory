@@ -41,7 +41,7 @@ const FILTER_DEFAULTS = { status: '', page: 1 };
       title="Conteos físicos"
       subtitle="Toma de inventario y ajustes por diferencias."
     >
-      <button type="button" class="btn btn-primary" (click)="create()">
+      <button type="button" class="btn btn-primary magnetic" (click)="create()">
         <ui-icon name="plus" [size]="4" /> Nuevo conteo
       </button>
     </ui-page-header>
@@ -51,7 +51,7 @@ const FILTER_DEFAULTS = { status: '', page: 1 };
         <label class="label" for="counts-status">Estado</label>
         <select
           id="counts-status"
-          class="input"
+          class="input input-pill"
           [value]="f().status"
           (change)="filters.patch({ status: $any($event.target).value })"
         >

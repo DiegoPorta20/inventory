@@ -26,7 +26,7 @@ test/                     e2e (needs MySQL)
 - One use case = one `@Injectable()` class with `execute(input)`; register it in the module providers.
 - Repositories read `this.database.db` (never a captured connection) so they join the active transaction.
 - Wrap multi-write use cases in `this.uow.run(async () => { ... })`.
-- Money is USD `decimal(12,4)`; map to `number` in mappers. Dates: `datetime` UTC, `date` as `YYYY-MM-DD` strings.
+- Money is soles (PEN) `decimal(12,4)` in `*_pen` columns, stored without IGV; map to `number` in mappers. Dates: `datetime` UTC, `date` as `YYYY-MM-DD` strings.
 - List endpoints return `{ items, total, page, pageSize }`; page size max 100.
 - Throw domain errors (`NotFoundError`, `ConflictError`, `BusinessRuleError`), never `HttpException`, from application/domain code.
 - Prefix every route with `/api` (global prefix). Routes are kebab-case plural nouns.

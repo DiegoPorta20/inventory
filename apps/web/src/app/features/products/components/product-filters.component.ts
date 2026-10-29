@@ -51,7 +51,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </div>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Categoría"
           [value]="asString(values().categoryId)"
           (change)="patchNum('categoryId', $any($event.target).value)"
@@ -69,7 +69,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Centro de costo"
           [value]="asString(values().costCenterId)"
           (change)="patchNum('costCenterId', $any($event.target).value)"
@@ -81,7 +81,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Unidad"
           [value]="values().unit"
           (change)="patch({ unit: $any($event.target).value })"
@@ -93,7 +93,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Estado de stock"
           [value]="values().stockStatus"
           (change)="patch({ stockStatus: $any($event.target).value })"
@@ -105,7 +105,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Equipo compatible"
           [value]="asString(values().equipmentId)"
           (change)="patchNum('equipmentId', $any($event.target).value)"
@@ -117,7 +117,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Importación"
           [value]="asString(values().importOrderId)"
           (change)="patchNum('importOrderId', $any($event.target).value)"
@@ -129,7 +129,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Estado activo"
           [value]="values().active"
           (change)="patch({ active: $any($event.target).value })"
@@ -140,7 +140,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Tipo de código"
           [value]="values().internalCode"
           (change)="patch({ internalCode: $any($event.target).value })"
@@ -151,7 +151,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Precio"
           [value]="values().hasPrice"
           (change)="patch({ hasPrice: $any($event.target).value })"
@@ -162,7 +162,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
-          class="input"
+          class="input input-pill"
           aria-label="Consignación"
           [value]="values().consignment"
           (change)="patch({ consignment: $any($event.target).value })"

@@ -134,9 +134,9 @@ import { ImportsApi } from '../imports.api';
                     </td>
                     <td class="num">{{ item.quantityOrdered | quantity }}</td>
                     <td class="num">{{ item.quantityReceived | quantity }}</td>
-                    <td class="num">{{ item.unitCostUsd | usd: true }}</td>
+                    <td class="num">{{ item.unitCostPen | pen: true }}</td>
                     <td class="num font-medium">
-                      {{ subtotal(item.quantityOrdered, item.unitCostUsd) | usd }}
+                      {{ subtotal(item.quantityOrdered, item.unitCostPen) | pen }}
                     </td>
                   </tr>
                 }
@@ -147,7 +147,7 @@ import { ImportsApi } from '../imports.api';
                   <td class="num">{{ o.totalOrdered | quantity }}</td>
                   <td class="num">{{ o.totalReceived | quantity }}</td>
                   <td></td>
-                  <td class="num">{{ o.totalCostUsd | usd }}</td>
+                  <td class="num">{{ o.totalCostPen | pen }}</td>
                 </tr>
               </tfoot>
             </table>
@@ -177,10 +177,6 @@ import { ImportsApi } from '../imports.api';
               <div>
                 <dt class="text-slate-500">Recibido</dt>
                 <dd class="text-slate-800">{{ o.receivedAt | dateOnly }}</dd>
-              </div>
-              <div>
-                <dt class="text-slate-500">T.C.</dt>
-                <dd class="text-slate-800 tabular-nums">{{ o.exchangeRate ?? '—' }}</dd>
               </div>
             </div>
             @if (o.notes) {

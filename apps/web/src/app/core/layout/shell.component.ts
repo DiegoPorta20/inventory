@@ -3,11 +3,14 @@ import {
   Component,
   ElementRef,
   HostListener,
+  afterNextRender,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { ROLE_LABELS } from '../../shared/models/labels';
 import { IconComponent, type IconName } from '../../shared/ui/icon.component';
 import { ToastHostComponent } from '../../shared/ui/toast-host.component';
@@ -54,6 +57,10 @@ const NAV: NavGroup[] = [
   },
 ];
 
+/** How far (as a fraction of the distance to the pointer) a magnetic button follows the cursor. */
+const MAGNET_X = 0.22;
+const MAGNET_Y = 0.28;
+
 @Component({
   selector: 'app-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, ToastHostComponent],
@@ -61,65 +68,67 @@ const NAV: NavGroup[] = [
   template: `
     <a
       href="#main"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-full focus:bg-white focus:px-4 focus:py-2"
     >
       Saltar al contenido
     </a>
 
     @if (menuOpen()) {
       <div
-        class="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+        class="fixed inset-0 z-30 bg-brand-950/40 backdrop-blur-[3px] lg:hidden"
         (click)="menuOpen.set(false)"
         aria-hidden="true"
       ></div>
     }
 
     <aside
-      class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0"
+      class="fixed inset-y-0 left-0 z-40 w-[17rem] p-3.5 transition-transform duration-500 ease-(--ease-soft) lg:translate-x-0"
       [class]="menuOpen() ? 'translate-x-0' : '-translate-x-full'"
       aria-label="Navegación principal"
     >
-      <div class="flex h-14 items-center gap-2.5 border-b border-slate-100 px-4">
-        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-          <ui-icon name="box" [size]="5" />
-        </span>
-        <div class="leading-tight">
-          <p class="text-sm font-semibold text-slate-900">Inventario</p>
-          <p class="text-xs text-slate-500">Almacén WY Miner</p>
-        </div>
-      </div>
-
-      <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-        @for (group of nav; track group.title) {
-          <div>
-            <p class="section-title mb-1.5 px-2">{{ group.title }}</p>
-            <ul class="space-y-0.5">
-              @for (item of group.items; track item.path) {
-                <li>
-                  <a
-                    [routerLink]="item.path"
-                    routerLinkActive="bg-brand-50 text-brand-700 font-medium"
-                    class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100"
-                    (click)="menuOpen.set(false)"
-                  >
-                    <ui-icon [name]="item.icon" [size]="5" />
-                    {{ item.label }}
-                  </a>
-                </li>
-              }
-            </ul>
+      <div class="side-panel">
+        <div class="flex items-center gap-3 px-1 pb-4">
+          <span
+            class="flex size-10 shrink-0 items-center justify-center rounded-[13px] bg-brand-100 text-brand-900"
+          >
+            <ui-icon name="box" [size]="5" />
+          </span>
+          <div class="min-w-0 leading-tight">
+            <p class="text-[19px] font-bold tracking-tight">Inventario</p>
+            <p class="truncate text-xs" style="color: var(--side-dim)">Almacén WY Miner</p>
           </div>
-        }
-      </nav>
+        </div>
+
+        <nav class="-mx-1 flex-1 overflow-y-auto px-1 [scrollbar-width:none]" #navEl>
+          <div class="nav-track">
+            <span class="nav-pill" aria-hidden="true" #pill></span>
+            @for (group of nav; track group.title) {
+              <p class="nav-group">{{ group.title }}</p>
+              @for (item of group.items; track item.path) {
+                <a
+                  [routerLink]="item.path"
+                  routerLinkActive="is-on"
+                  class="nav-item"
+                  (click)="menuOpen.set(false)"
+                >
+                  <ui-icon [name]="item.icon" [size]="5" />
+                  {{ item.label }}
+                </a>
+              }
+            }
+          </div>
+        </nav>
+      </div>
     </aside>
 
-    <div class="lg:pl-64">
+    <div class="lg:pl-[17rem]">
       <header
-        class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur"
+        class="sticky top-0 z-20 flex items-center gap-3 px-(--gutter) py-4 backdrop-blur-md"
+        style="background: color-mix(in srgb, var(--page) 88%, transparent)"
       >
         <button
           type="button"
-          class="btn btn-ghost btn-icon lg:hidden"
+          class="btn btn-secondary btn-icon rounded-full lg:hidden"
           aria-label="Abrir menú"
           (click)="menuOpen.set(true)"
         >
@@ -128,13 +137,13 @@ const NAV: NavGroup[] = [
 
         <form class="relative max-w-md flex-1" role="search" (submit)="search($event)">
           <span
-            class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400"
+            class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400"
           >
             <ui-icon name="search" [size]="4" />
           </span>
           <input
             #searchBox
-            class="input bg-slate-50 pl-9"
+            class="input input-pill h-11 bg-white pl-10 shadow-sm"
             type="search"
             placeholder="Buscar producto por código o descripción  ( / )"
             aria-label="Buscar producto"
@@ -145,18 +154,20 @@ const NAV: NavGroup[] = [
         <div class="relative ml-auto">
           <button
             type="button"
-            class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100"
+            class="flex items-center gap-2.5 rounded-full py-1 pr-3 pl-1 transition-colors duration-300 hover:bg-white"
             aria-haspopup="menu"
             [attr.aria-expanded]="userMenuOpen()"
             (click)="userMenuOpen.set(!userMenuOpen())"
           >
             <span
-              class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700"
+              class="flex size-11 items-center justify-center rounded-full border-2 border-white bg-brand-100 text-sm font-bold text-brand-700 shadow-sm"
             >
               {{ initials() }}
             </span>
             <span class="hidden text-left leading-tight sm:block">
-              <span class="block text-sm font-medium text-slate-800">{{ auth.user()?.name }}</span>
+              <span class="block text-[13.5px] font-semibold text-slate-900">{{
+                auth.user()?.name
+              }}</span>
               <span class="block text-xs text-slate-500">{{ roleLabel() }}</span>
             </span>
             <ui-icon name="chevron-down" [size]="4" />
@@ -170,26 +181,24 @@ const NAV: NavGroup[] = [
             ></div>
             <div
               role="menu"
-              class="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-slate-200 bg-white py-1 shadow-xl"
+              class="pop-in absolute right-0 z-40 mt-2 w-60 rounded-2xl border bg-white p-1.5 shadow-xl"
+              style="border-color: var(--line); transform-origin: top right"
             >
-              <div class="border-b border-slate-100 px-3 py-2">
-                <p class="truncate text-sm font-medium text-slate-800">{{ auth.user()?.name }}</p>
+              <div class="mb-1 px-3 py-2" style="border-bottom: 1px solid var(--line)">
+                <p class="truncate text-[13.5px] font-semibold text-slate-900">
+                  {{ auth.user()?.name }}
+                </p>
                 <p class="truncate text-xs text-slate-500">{{ auth.user()?.email }}</p>
               </div>
               <a
                 role="menuitem"
                 routerLink="/account"
-                class="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                class="menu-item"
                 (click)="userMenuOpen.set(false)"
               >
                 <ui-icon name="lock" [size]="4" /> Cambiar contraseña
               </a>
-              <button
-                type="button"
-                role="menuitem"
-                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                (click)="logout()"
-              >
+              <button type="button" role="menuitem" class="menu-item w-full" (click)="logout()">
                 <ui-icon name="logout" [size]="4" /> Cerrar sesión
               </button>
             </div>
@@ -197,7 +206,7 @@ const NAV: NavGroup[] = [
         </div>
       </header>
 
-      <main id="main" class="mx-auto w-full max-w-7xl p-4 md:p-6" tabindex="-1">
+      <main id="main" class="mx-auto w-full max-w-[1600px] px-(--gutter) pt-2 pb-8" tabindex="-1">
         <router-outlet />
       </main>
     </div>
@@ -209,10 +218,54 @@ export class ShellComponent {
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
+  private readonly navRef = viewChild<ElementRef<HTMLElement>>('navEl');
+  private readonly pillRef = viewChild<ElementRef<HTMLElement>>('pill');
 
   protected readonly nav = NAV;
   protected readonly menuOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
+
+  private magnet: HTMLElement | null = null;
+  private pillPlaced = false;
+  private readonly canHover = matchMedia('(hover: hover) and (pointer: fine)');
+  private readonly reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  constructor() {
+    afterNextRender(() => {
+      this.movePill(false);
+      // Web fonts change line heights, so re-measure once they are ready.
+      void document.fonts?.ready.then(() => this.movePill(false));
+    });
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      // routerLinkActive updates its class in a microtask; measure on the next frame.
+      .subscribe(() => requestAnimationFrame(() => this.movePill(true)));
+  }
+
+  /** Slides the highlight behind the active item; the first placement is instant. */
+  private movePill(animate: boolean): void {
+    const pill = this.pillRef()?.nativeElement;
+    const track = this.navRef()?.nativeElement.querySelector<HTMLElement>('.nav-track');
+    const active = track?.querySelector<HTMLElement>('.nav-item.is-on');
+    if (!pill) return;
+    if (!track || !active) {
+      pill.style.opacity = '0';
+      return;
+    }
+    const instant = !animate || !this.pillPlaced || this.reduceMotion.matches;
+    if (instant) pill.style.transition = 'none';
+    pill.style.opacity = '1';
+    pill.style.height = `${active.offsetHeight}px`;
+    pill.style.transform = `translateY(${active.offsetTop}px)`;
+    if (instant) {
+      void pill.offsetHeight; // commit the instant placement before transitions come back
+      pill.style.transition = '';
+    }
+    this.pillPlaced = true;
+  }
 
   protected initials(): string {
     const name = this.auth.user()?.name ?? '';
@@ -240,6 +293,31 @@ export class ShellComponent {
   protected logout(): void {
     this.userMenuOpen.set(false);
     this.auth.logout().subscribe();
+  }
+
+  @HostListener('window:resize')
+  protected onResize(): void {
+    this.movePill(false);
+  }
+
+  /** Primary actions marked `.magnetic` drift slightly toward the cursor. */
+  @HostListener('document:pointermove', ['$event'])
+  protected onPointerMove(event: PointerEvent): void {
+    if (!this.canHover.matches || this.reduceMotion.matches) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const next = target?.closest<HTMLElement>('.magnetic') ?? null;
+
+    if (this.magnet && this.magnet !== next) {
+      this.magnet.style.translate = '';
+      this.magnet = null;
+    }
+    if (!next) return;
+
+    const box = next.getBoundingClientRect();
+    const x = (event.clientX - box.left - box.width / 2) * MAGNET_X;
+    const y = (event.clientY - box.top - box.height / 2) * MAGNET_Y;
+    next.style.translate = `${x}px ${y}px`;
+    this.magnet = next;
   }
 
   @HostListener('document:keydown', ['$event'])

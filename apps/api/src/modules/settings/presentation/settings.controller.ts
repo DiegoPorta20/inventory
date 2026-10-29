@@ -9,7 +9,6 @@ import {
 } from '../application/use-cases/pricing-settings-use-cases.js';
 
 const updatePricingSchema = z.strictObject({
-  exchangeRate: z.number().gt(0).max(100).optional(),
   igvRate: z.number().min(0).max(1).optional(),
 });
 type UpdatePricingBody = z.infer<typeof updatePricingSchema>;
