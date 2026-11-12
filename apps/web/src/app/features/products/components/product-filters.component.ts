@@ -9,6 +9,7 @@ import type {
   UnitOfMeasure,
 } from '../../../shared/models/models';
 import { IconComponent } from '../../../shared/ui/icon.component';
+import { CanDirective } from '../../../core/config/can.directive';
 import { SearchInputComponent } from '../../../shared/ui/search-input.component';
 import { buildCategoryOptions } from '../category-options';
 
@@ -36,7 +37,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
 
 @Component({
   selector: 'app-product-filters',
-  imports: [SearchInputComponent, IconComponent],
+  imports: [CanDirective, SearchInputComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="card p-4">
@@ -117,6 +118,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
+          *appCan="'imports.view'"
           class="input input-pill"
           aria-label="Importación"
           [value]="asString(values().importOrderId)"
@@ -162,6 +164,7 @@ const STOCK_STATUSES: StockStatusFilter[] = ['OUT', 'LOW', 'OK', 'UNCONFIGURED']
         </select>
 
         <select
+          *appCan="'products.prices.view'"
           class="input input-pill"
           aria-label="Consignación"
           [value]="values().consignment"

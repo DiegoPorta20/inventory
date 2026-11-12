@@ -25,6 +25,10 @@ import {
   type ListEquipmentModelsQuery,
   type UpdateEquipmentModelBody,
 } from './equipment-models.schemas.js';
+import {
+  RequireAnyPermission,
+  RequirePermission,
+} from '../../../shared/presentation/decorators.js';
 
 @Controller('equipment-models')
 export class EquipmentModelsController {
@@ -36,11 +40,13 @@ export class EquipmentModelsController {
   ) {}
 
   @Get()
+  @RequireAnyPermission('equipment.view', 'products.view', 'reorder.view')
   list(@Query(new ZodValidationPipe(listEquipmentModelsSchema)) query: ListEquipmentModelsQuery) {
     return this.listModels.execute(query.search);
   }
 
   @Post()
+  @RequirePermission('equipment.manage')
   create(@Body(new ZodValidationPipe(createEquipmentModelSchema)) body: CreateEquipmentModelBody) {
     return this.createModel.execute({
       name: body.name,
@@ -50,6 +56,7 @@ export class EquipmentModelsController {
   }
 
   @Patch(':id')
+  @RequirePermission('equipment.manage')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(updateEquipmentModelSchema)) body: UpdateEquipmentModelBody,
@@ -58,6 +65,7 @@ export class EquipmentModelsController {
   }
 
   @Delete(':id')
+  @RequirePermission('equipment.manage')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.deleteModel.execute(id);

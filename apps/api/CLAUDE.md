@@ -14,7 +14,7 @@ src/
     infrastructure/database/  schema.ts, DatabaseService (ALS transactions), migrate.ts
     presentation/         ZodValidationPipe, DomainExceptionFilter, @Public, @Roles, @CurrentUser
   modules/<name>/{domain,application,infrastructure,presentation}
-  scripts/                seed.ts, import-excel.ts (+ excel/ helpers)
+  scripts/                seed.ts, import-excel.ts (+ excel/ helpers); all take --company=<slug>
 drizzle/                  generated SQL migrations
 test/                     e2e (needs MySQL)
 ```
@@ -30,6 +30,18 @@ test/                     e2e (needs MySQL)
 - List endpoints return `{ items, total, page, pageSize }`; page size max 100.
 - Throw domain errors (`NotFoundError`, `ConflictError`, `BusinessRuleError`), never `HttpException`, from application/domain code.
 - Prefix every route with `/api` (global prefix). Routes are kebab-case plural nouns.
+
+## Multi-company (tenancy)
+
+Inventory holds no company configuration. Companies, branding, enabled modules, permissions and user limits belong to the separate `config_inventory` project; this API only reads them (`CompanyDirectory`).
+
+- Shared database: every tenant-owned table has `company_id NOT NULL` (the id assigned by config_inventory, no foreign key), and unique indexes are per company (`(company_id, code)`). Child tables (`*_items`, `product_equipment`) inherit it from their parent.
+- Repositories of tenant data inject `TenantContext` and add `eq(table.companyId, this.tenant.companyId)` to **every** select, update and delete, and set `companyId` on every insert. `tenant.companyId` throws when nothing is bound, so a missing binding fails closed.
+- The company comes only from the signed JWT (`cid`), bound by `JwtAuthGuard`. Never read it from the request body, params or query.
+- Any id received from a client that is stored or joined (category, supplier, product, ...) must be checked through a scoped `findById` before use, so one company cannot reference another's rows. A foreign id must answer 404, never 403.
+- Login is `POST /api/auth/login` with `{ company, email, password }`; `company` is the slug known to config_inventory.
+- `/api/internal/*` is server-to-server for config_inventory (header `x-service-key` = `INTERNAL_API_KEY`). Keep it minimal.
+- Scripts run against one company: `--company=<id>` or `SEED_COMPANY_ID`. They use the raw `db`, so they must scope their own queries.
 
 ## Commands
 

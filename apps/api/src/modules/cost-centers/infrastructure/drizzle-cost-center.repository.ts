@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { count, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../../shared/domain/errors.js';
 import { DatabaseService } from '../../../shared/infrastructure/database/database.service.js';
 import { isDuplicateEntry } from '../../../shared/infrastructure/database/mysql-errors.js';
 import { costCenters, products } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import { CostCenterRepository } from '../application/ports/cost-center.repository.js';
 import type { CostCenter, CostCenterWithCount } from '../domain/cost-center.js';
 
@@ -11,8 +12,15 @@ const DUPLICATE_MESSAGE = 'A cost center with this name already exists';
 
 @Injectable()
 export class DrizzleCostCenterRepository extends CostCenterRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
+  }
+
+  private get inCompany() {
+    return eq(costCenters.companyId, this.tenant.companyId);
   }
 
   async findAllWithCounts(): Promise<CostCenterWithCount[]> {
@@ -20,6 +28,7 @@ export class DrizzleCostCenterRepository extends CostCenterRepository {
       .select({ id: costCenters.id, name: costCenters.name, productCount: count(products.id) })
       .from(costCenters)
       .leftJoin(products, eq(products.costCenterId, costCenters.id))
+      .where(this.inCompany)
       .groupBy(costCenters.id)
       .orderBy(costCenters.name);
     return rows.map((row) => ({ ...row, productCount: Number(row.productCount) }));
@@ -29,14 +38,16 @@ export class DrizzleCostCenterRepository extends CostCenterRepository {
     const [row] = await this.database.db
       .select({ id: costCenters.id, name: costCenters.name })
       .from(costCenters)
-      .where(eq(costCenters.id, id))
+      .where(and(eq(costCenters.id, id), this.inCompany))
       .limit(1);
     return row ?? null;
   }
 
   async create(name: string): Promise<CostCenter> {
     try {
-      const [result] = await this.database.db.insert(costCenters).values({ name });
+      const [result] = await this.database.db
+        .insert(costCenters)
+        .values({ name, companyId: this.tenant.companyId });
       return this.requireById(result.insertId);
     } catch (error) {
       if (isDuplicateEntry(error)) throw new ConflictError(DUPLICATE_MESSAGE);
@@ -46,7 +57,10 @@ export class DrizzleCostCenterRepository extends CostCenterRepository {
 
   async rename(id: number, name: string): Promise<CostCenter> {
     try {
-      await this.database.db.update(costCenters).set({ name }).where(eq(costCenters.id, id));
+      await this.database.db
+        .update(costCenters)
+        .set({ name })
+        .where(and(eq(costCenters.id, id), this.inCompany));
     } catch (error) {
       if (isDuplicateEntry(error)) throw new ConflictError(DUPLICATE_MESSAGE);
       throw error;
@@ -58,12 +72,12 @@ export class DrizzleCostCenterRepository extends CostCenterRepository {
     const [row] = await this.database.db
       .select({ value: count() })
       .from(products)
-      .where(eq(products.costCenterId, id));
+      .where(and(eq(products.costCenterId, id), eq(products.companyId, this.tenant.companyId)));
     return Number(row?.value ?? 0);
   }
 
   async delete(id: number): Promise<void> {
-    await this.database.db.delete(costCenters).where(eq(costCenters.id, id));
+    await this.database.db.delete(costCenters).where(and(eq(costCenters.id, id), this.inCompany));
   }
 
   private async requireById(id: number): Promise<CostCenter> {

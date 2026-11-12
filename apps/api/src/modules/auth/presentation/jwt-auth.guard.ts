@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { AuthenticatedUser } from '../../../shared/domain/auth.js';
 import { UnauthorizedError } from '../../../shared/domain/errors.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import { IS_PUBLIC_KEY } from '../../../shared/presentation/decorators.js';
 import { TokenService } from '../application/ports/token.service.js';
 import { AuthCookies } from './auth-cookies.js';
@@ -13,6 +14,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly tokens: TokenService,
     private readonly cookies: AuthCookies,
+    private readonly tenant: TenantContext,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -28,6 +30,7 @@ export class JwtAuthGuard implements CanActivate {
     if (!user) throw new UnauthorizedError('Authentication required');
 
     request.user = user;
+    this.tenant.bind(user.companyId);
     return true;
   }
 }

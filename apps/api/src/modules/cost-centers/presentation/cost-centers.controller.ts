@@ -17,6 +17,10 @@ import {
   ListCostCenters,
   RenameCostCenter,
 } from '../application/use-cases/cost-center-use-cases.js';
+import {
+  RequireAnyPermission,
+  RequirePermission,
+} from '../../../shared/presentation/decorators.js';
 
 const costCenterSchema = z.strictObject({ name: z.string().trim().min(1).max(120) });
 type CostCenterBody = z.infer<typeof costCenterSchema>;
@@ -31,16 +35,19 @@ export class CostCentersController {
   ) {}
 
   @Get()
+  @RequireAnyPermission('cost-centers.view', 'products.view')
   list() {
     return this.listCostCenters.execute();
   }
 
   @Post()
+  @RequirePermission('cost-centers.manage')
   create(@Body(new ZodValidationPipe(costCenterSchema)) body: CostCenterBody) {
     return this.createCostCenter.execute(body.name);
   }
 
   @Patch(':id')
+  @RequirePermission('cost-centers.manage')
   rename(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(costCenterSchema)) body: CostCenterBody,
@@ -49,6 +56,7 @@ export class CostCentersController {
   }
 
   @Delete(':id')
+  @RequirePermission('cost-centers.manage')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.deleteCostCenter.execute(id);

@@ -4,6 +4,7 @@ import {
   ElementRef,
   HostListener,
   afterNextRender,
+  computed,
   inject,
   signal,
   viewChild,
@@ -15,11 +16,14 @@ import { ROLE_LABELS } from '../../shared/models/labels';
 import { IconComponent, type IconName } from '../../shared/ui/icon.component';
 import { ToastHostComponent } from '../../shared/ui/toast-host.component';
 import { AuthService } from '../auth/auth.service';
+import { ClientConfigService } from '../config/client-config.service';
 
 interface NavItem {
   label: string;
   path: string;
   icon: IconName;
+  /** Module key that must be usable for the item to appear. */
+  module: string;
 }
 
 interface NavGroup {
@@ -28,31 +32,34 @@ interface NavGroup {
 }
 
 const NAV: NavGroup[] = [
-  { title: 'Resumen', items: [{ label: 'Panel', path: '/dashboard', icon: 'chart' }] },
+  {
+    title: 'Resumen',
+    items: [{ label: 'Panel', path: '/dashboard', icon: 'chart', module: 'dashboard' }],
+  },
   {
     title: 'Inventario',
     items: [
-      { label: 'Productos', path: '/products', icon: 'box' },
-      { label: 'Categorías', path: '/categories', icon: 'layers' },
-      { label: 'Centros de costo', path: '/cost-centers', icon: 'tag' },
-      { label: 'Movimientos', path: '/movements', icon: 'swap' },
-      { label: 'Conteos físicos', path: '/counts', icon: 'clipboard-check' },
+      { label: 'Productos', path: '/products', icon: 'box', module: 'products' },
+      { label: 'Categorías', path: '/categories', icon: 'layers', module: 'categories' },
+      { label: 'Centros de costo', path: '/cost-centers', icon: 'tag', module: 'cost-centers' },
+      { label: 'Movimientos', path: '/movements', icon: 'swap', module: 'movements' },
+      { label: 'Conteos físicos', path: '/counts', icon: 'clipboard-check', module: 'counts' },
     ],
   },
   {
     title: 'Compras',
     items: [
-      { label: 'Reposición', path: '/reorder', icon: 'cart' },
-      { label: 'Importaciones', path: '/imports', icon: 'truck' },
-      { label: 'Proveedores', path: '/suppliers', icon: 'building' },
-      { label: 'Equipos', path: '/equipment', icon: 'wrench' },
+      { label: 'Reposición', path: '/reorder', icon: 'cart', module: 'reorder' },
+      { label: 'Importaciones', path: '/imports', icon: 'truck', module: 'imports' },
+      { label: 'Proveedores', path: '/suppliers', icon: 'building', module: 'suppliers' },
+      { label: 'Equipos', path: '/equipment', icon: 'wrench', module: 'equipment' },
     ],
   },
   {
     title: 'Administración',
     items: [
-      { label: 'Usuarios', path: '/users', icon: 'users' },
-      { label: 'Configuración', path: '/settings', icon: 'wrench' },
+      { label: 'Usuarios', path: '/users', icon: 'users', module: 'users' },
+      { label: 'Configuración', path: '/settings', icon: 'wrench', module: 'settings' },
     ],
   },
 ];
@@ -89,20 +96,26 @@ const MAGNET_Y = 0.28;
       <div class="side-panel">
         <div class="flex items-center gap-3 px-1 pb-4">
           <span
-            class="flex size-10 shrink-0 items-center justify-center rounded-[13px] bg-brand-100 text-brand-900"
+            class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[13px] bg-brand-100 text-brand-900"
           >
-            <ui-icon name="box" [size]="5" />
+            @if (config.config()?.branding?.logoUrl; as logo) {
+              <img [src]="logo" alt="" class="size-full object-contain" />
+            } @else {
+              <ui-icon name="box" [size]="5" />
+            }
           </span>
           <div class="min-w-0 leading-tight">
-            <p class="text-[19px] font-bold tracking-tight">Inventario</p>
-            <p class="truncate text-xs" style="color: var(--side-dim)">Almacén WY Miner</p>
+            <p class="truncate text-[19px] font-bold tracking-tight">{{ config.appName() }}</p>
+            @if (config.config()?.branding?.tagline; as tagline) {
+              <p class="truncate text-xs" style="color: var(--side-dim)">{{ tagline }}</p>
+            }
           </div>
         </div>
 
         <nav class="-mx-1 flex-1 overflow-y-auto px-1 [scrollbar-width:none]" #navEl>
           <div class="nav-track">
             <span class="nav-pill" aria-hidden="true" #pill></span>
-            @for (group of nav; track group.title) {
+            @for (group of nav(); track group.title) {
               <p class="nav-group">{{ group.title }}</p>
               @for (item of group.items; track item.path) {
                 <a
@@ -135,7 +148,12 @@ const MAGNET_Y = 0.28;
           <ui-icon name="menu" [size]="5" />
         </button>
 
-        <form class="relative max-w-md flex-1" role="search" (submit)="search($event)">
+        <form
+          class="relative max-w-md flex-1"
+          role="search"
+          (submit)="search($event)"
+          [hidden]="!config.allows('products')"
+        >
           <span
             class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400"
           >
@@ -221,7 +239,15 @@ export class ShellComponent {
   private readonly navRef = viewChild<ElementRef<HTMLElement>>('navEl');
   private readonly pillRef = viewChild<ElementRef<HTMLElement>>('pill');
 
-  protected readonly nav = NAV;
+  protected readonly config = inject(ClientConfigService);
+
+  /** Only the groups and items whose module the user may open. */
+  protected readonly nav = computed(() =>
+    NAV.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => this.config.allows(item.module)),
+    })).filter((group) => group.items.length > 0),
+  );
   protected readonly menuOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
 

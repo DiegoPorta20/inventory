@@ -6,7 +6,40 @@ import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 import { loadEnv } from '../src/config/env.js';
 import { ensureAdmin, ensureTaxonomy } from '../src/scripts/seed-data.js';
+import { ALL_MODULES } from '../src/shared/domain/permissions.js';
 import { DatabaseService } from '../src/shared/infrastructure/database/database.service.js';
+import { CompanyDirectory } from '../src/modules/company-directory/application/ports/company-directory.js';
+import type { CompanyProfile } from '../src/modules/company-directory/domain/company-profile.js';
+
+const COMPANY_SLUG = 'testco';
+const COMPANY_ID = 1;
+
+const TEST_COMPANY: CompanyProfile = {
+  id: COMPANY_ID,
+  slug: COMPANY_SLUG,
+  name: 'Test Co',
+  status: 'ACTIVE',
+  config: {
+    branding: {
+      appName: 'Test',
+      tagline: null,
+      logoUrl: null,
+      faviconUrl: null,
+      primaryColor: '#273f85',
+      accentColor: null,
+      palette: { primary: {}, accent: {} },
+    },
+    modules: [...ALL_MODULES],
+    permissions: { PERSONAL: [] },
+    limits: { maxUsers: null },
+  },
+};
+
+/** Stands in for config_inventory so the e2e suite needs no second service. */
+class FakeCompanyDirectory extends CompanyDirectory {
+  findBySlug = async (slug: string) => (slug === COMPANY_SLUG ? TEST_COMPANY : null);
+  findById = async (id: number) => (id === COMPANY_ID ? TEST_COMPANY : null);
+}
 
 describe('Inventory API (e2e)', () => {
   let app: NestExpressApplication;
@@ -15,14 +48,17 @@ describe('Inventory API (e2e)', () => {
 
   beforeAll(async () => {
     const env = loadEnv();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(CompanyDirectory)
+      .useValue(new FakeCompanyDirectory())
+      .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
     setupApp(app, env);
     await app.init();
 
     const { db } = app.get(DatabaseService);
-    await ensureAdmin(db, env);
-    await ensureTaxonomy(db);
+    await ensureAdmin(db, env, COMPANY_ID);
+    await ensureTaxonomy(db, COMPANY_ID);
     api = request.agent(app.getHttpServer());
   });
 
@@ -37,11 +73,11 @@ describe('Inventory API (e2e)', () => {
   it('rejects wrong credentials and accepts valid ones', async () => {
     await api
       .post('/api/auth/login')
-      .send({ email: 'admin@test.local', password: 'wrong-password' })
+      .send({ company: COMPANY_SLUG, email: 'admin@test.local', password: 'wrong-password' })
       .expect(401);
     const login = await api
       .post('/api/auth/login')
-      .send({ email: 'admin@test.local', password: 'Passw0rd!test' })
+      .send({ company: COMPANY_SLUG, email: 'admin@test.local', password: 'Passw0rd!test' })
       .expect(200);
     expect(login.body.role).toBe('ADMIN');
     expect(login.body.passwordHash).toBeUndefined();

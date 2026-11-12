@@ -22,6 +22,10 @@ import {
   type CreateCategoryBody,
   type UpdateCategoryBody,
 } from './categories.schemas.js';
+import {
+  RequireAnyPermission,
+  RequirePermission,
+} from '../../../shared/presentation/decorators.js';
 
 @Controller('categories')
 export class CategoriesController {
@@ -33,16 +37,19 @@ export class CategoriesController {
   ) {}
 
   @Get()
+  @RequireAnyPermission('categories.view', 'products.view', 'counts.create', 'reorder.view')
   list() {
     return this.listCategories.execute();
   }
 
   @Post()
+  @RequirePermission('categories.manage')
   create(@Body(new ZodValidationPipe(createCategorySchema)) body: CreateCategoryBody) {
     return this.createCategory.execute(body);
   }
 
   @Patch(':id')
+  @RequirePermission('categories.manage')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(updateCategorySchema)) body: UpdateCategoryBody,
@@ -51,6 +58,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @RequirePermission('categories.manage')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.deleteCategory.execute(id);

@@ -144,7 +144,6 @@ export class BulkActionDialog {
     isActive: [true],
   });
 
-
   private buildChanges(): BulkChanges | null {
     const value = this.form.getRawValue();
     switch (this.data.action) {

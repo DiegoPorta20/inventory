@@ -28,12 +28,14 @@ import {
 import { ToastService } from '../../../shared/ui/toast.service';
 import { CountItemsTableComponent } from '../components/count-items-table.component';
 import { CountsApi } from '../counts.api';
+import { CanDirective } from '../../../core/config/can.directive';
 
 const PAGE_SIZE = 50;
 
 @Component({
   selector: 'app-count-detail-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -69,6 +71,7 @@ const PAGE_SIZE = 50;
         >
         @if (isOpen()) {
           <button
+            *appCan="'counts.record'"
             type="button"
             class="btn btn-secondary"
             [disabled]="busy()"
@@ -76,10 +79,22 @@ const PAGE_SIZE = 50;
           >
             Confirmar pendientes con stock del sistema
           </button>
-          <button type="button" class="btn btn-secondary" [disabled]="busy()" (click)="cancel()">
+          <button
+            *appCan="'counts.complete'"
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="busy()"
+            (click)="cancel()"
+          >
             Cancelar conteo
           </button>
-          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="complete()">
+          <button
+            *appCan="'counts.complete'"
+            type="button"
+            class="btn btn-primary"
+            [disabled]="busy()"
+            (click)="complete()"
+          >
             Completar conteo
           </button>
         } @else {

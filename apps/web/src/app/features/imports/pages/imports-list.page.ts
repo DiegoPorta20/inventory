@@ -19,10 +19,12 @@ import { useQueryFilters } from '../../../shared/util/query-filters';
 import { SuppliersApi } from '../../suppliers/suppliers.api';
 import { ImportsApi } from '../imports.api';
 import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.component';
+import { CanDirective } from '../../../core/config/can.directive';
 
 @Component({
   selector: 'app-imports-list-page',
   imports: [
+    CanDirective,
     DateRangeFilterComponent,
     RouterLink,
     FORMAT_PIPES,
@@ -38,7 +40,7 @@ import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.c
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Importaciones" subtitle="Órdenes de compra y envíos de los proveedores.">
-      <a class="btn btn-primary magnetic" routerLink="/imports/new">
+      <a *appCan="'imports.create'" class="btn btn-primary magnetic" routerLink="/imports/new">
         <ui-icon name="plus" [size]="4" /> Nueva importación
       </a>
     </ui-page-header>
@@ -105,7 +107,7 @@ import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.c
             title="No hay importaciones"
             description="Registra una importación para controlar lo que compras y recibes."
           >
-            <a class="btn btn-primary" routerLink="/imports/new">
+            <a *appCan="'imports.create'" class="btn btn-primary" routerLink="/imports/new">
               <ui-icon name="plus" [size]="4" /> Nueva importación
             </a>
           </ui-empty-state>
@@ -122,7 +124,7 @@ import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.c
                   <th>Recibido</th>
                   <th class="num">Líneas</th>
                   <th class="num">Ped. / Rec.</th>
-                  <th class="num">Costo S/</th>
+                  <th *appCan="'products.costs.view'" class="num">Costo S/</th>
                 </tr>
               </thead>
               <tbody>
@@ -140,7 +142,9 @@ import { DateRangeFilterComponent } from '../../../shared/ui/date-range-filter.c
                     <td class="num">
                       {{ o.totalOrdered | quantity }} / {{ o.totalReceived | quantity }}
                     </td>
-                    <td class="num font-medium">{{ o.totalCostPen | pen }}</td>
+                    <td *appCan="'products.costs.view'" class="num font-medium">
+                      {{ o.totalCostPen | pen }}
+                    </td>
                   </tr>
                 }
               </tbody>

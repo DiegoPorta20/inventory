@@ -14,7 +14,7 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import { offsetOf, toPage, type Page, type PageRequest } from '../../../shared/application/page.js';
-import { BusinessRuleError } from '../../../shared/domain/errors.js';
+import { BusinessRuleError, NotFoundError } from '../../../shared/domain/errors.js';
 import { DatabaseService } from '../../../shared/infrastructure/database/database.service.js';
 import {
   categories,
@@ -22,6 +22,7 @@ import {
   stockCountItems,
   stockCounts,
 } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import {
   StockCountRepository,
   type NewStockCount,
@@ -48,13 +49,33 @@ const emptySummary: StockCountSummary = {
 
 @Injectable()
 export class DrizzleStockCountRepository extends StockCountRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
+  }
+
+  private get inCompany() {
+    return eq(stockCounts.companyId, this.tenant.companyId);
+  }
+
+  /** Items are keyed by count id only, so every id-based operation first proves ownership. */
+  private async assertOwned(id: number): Promise<void> {
+    const [row] = await this.database.db
+      .select({ id: stockCounts.id })
+      .from(stockCounts)
+      .where(and(eq(stockCounts.id, id), this.inCompany))
+      .limit(1);
+    if (!row) throw new NotFoundError('Stock count', id);
   }
 
   createWithSnapshot(input: NewStockCount): Promise<StockCount> {
     return this.database.transaction(async () => {
-      const scope: SQL[] = [eq(products.isActive, true)];
+      const scope: SQL[] = [
+        eq(products.isActive, true),
+        eq(products.companyId, this.tenant.companyId),
+      ];
       if (input.categoryId) {
         scope.push(
           sql`${products.categoryId} IN (SELECT ${categories.id} FROM ${categories} WHERE ${categories.id} = ${input.categoryId} OR ${categories.parentId} = ${input.categoryId})`,
@@ -72,6 +93,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
       }
 
       const [result] = await this.database.db.insert(stockCounts).values({
+        companyId: this.tenant.companyId,
         name: input.name,
         categoryId: input.categoryId,
         note: input.note,
@@ -95,7 +117,9 @@ export class DrizzleStockCountRepository extends StockCountRepository {
   }
 
   async findById(id: number): Promise<StockCount | null> {
-    const [row] = await this.countQuery().where(eq(stockCounts.id, id)).limit(1);
+    const [row] = await this.countQuery()
+      .where(and(eq(stockCounts.id, id), this.inCompany))
+      .limit(1);
     return row ? this.toCount(row) : null;
   }
 
@@ -103,7 +127,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
     filters: StockCountFilters,
     page: PageRequest,
   ): Promise<Page<StockCount & { summary: StockCountSummary }>> {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [this.inCompany];
     if (filters.status) conditions.push(eq(stockCounts.status, filters.status));
     if (filters.categoryId) conditions.push(eq(stockCounts.categoryId, filters.categoryId));
     const where = and(...conditions);
@@ -127,6 +151,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
   }
 
   async summaryOf(id: number): Promise<StockCountSummary> {
+    await this.assertOwned(id);
     return (await this.summaries([id])).get(id) ?? emptySummary;
   }
 
@@ -135,6 +160,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
     filters: StockCountItemFilters,
     page: PageRequest,
   ): Promise<Page<StockCountItem>> {
+    await this.assertOwned(id);
     const conditions: SQL[] = [eq(stockCountItems.stockCountId, id)];
     if (filters.onlyPending) conditions.push(isNull(stockCountItems.countedQty));
     if (filters.onlyDifferences) {
@@ -168,6 +194,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
   }
 
   async findCountedItems(id: number): Promise<StockCountItem[]> {
+    await this.assertOwned(id);
     const rows = await this.itemQuery().where(
       and(eq(stockCountItems.stockCountId, id), isNotNull(stockCountItems.countedQty)),
     );
@@ -180,6 +207,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
     countedQty: number | null,
     note: string | null | undefined,
   ): Promise<StockCountItem | null> {
+    await this.assertOwned(id);
     const values: Partial<typeof stockCountItems.$inferInsert> = { countedQty };
     if (note !== undefined) values.note = note;
     await this.database.db
@@ -194,6 +222,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
   }
 
   async confirmPendingItems(id: number): Promise<number> {
+    await this.assertOwned(id);
     const [result] = await this.database.db
       .update(stockCountItems)
       .set({ countedQty: sql`${stockCountItems.systemQty}` })
@@ -205,7 +234,7 @@ export class DrizzleStockCountRepository extends StockCountRepository {
     await this.database.db
       .update(stockCounts)
       .set({ status, completedAt: completedAt ?? null })
-      .where(eq(stockCounts.id, id));
+      .where(and(eq(stockCounts.id, id), this.inCompany));
   }
 
   private countQuery() {

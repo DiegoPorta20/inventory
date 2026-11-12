@@ -19,6 +19,7 @@ export abstract class UserRepository {
   abstract findAll(): Promise<User[]>;
   abstract findById(id: number): Promise<User | null>;
   abstract findByEmail(email: string): Promise<User | null>;
+  abstract countActive(): Promise<number>;
   abstract create(user: NewUser): Promise<User>;
   abstract update(id: number, changes: UserChanges): Promise<User>;
   abstract recordLogin(id: number, at: Date): Promise<void>;

@@ -28,12 +28,15 @@ import { ErrorStateComponent } from '../../../shared/ui/states.components';
 import { ToastService } from '../../../shared/ui/toast.service';
 import { buildCategoryOptions } from '../category-options';
 import { ProductsApi, type ProductInput } from '../products.api';
+import { CanDirective } from '../../../core/config/can.directive';
+import { ClientConfigService } from '../../../core/config/client-config.service';
 
 const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
 
 @Component({
   selector: 'app-product-form-page',
   imports: [
+    CanDirective,
     ReactiveFormsModule,
     RouterLink,
     FORMAT_PIPES,
@@ -168,7 +171,12 @@ const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
                 formControlName="reorderQuantity"
               />
             </ui-field>
-            <ui-field label="Costo (S/)" for="costPen" [error]="errors()['costPen']">
+            <ui-field
+              *appCan="'products.costs.view'"
+              label="Costo (S/)"
+              for="costPen"
+              [error]="errors()['costPen']"
+            >
               <input
                 id="costPen"
                 class="input"
@@ -178,111 +186,115 @@ const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
                 formControlName="costPen"
               />
             </ui-field>
-            <div></div>
-            <ui-field
-              label="Precio de venta (S/ sin IGV)"
-              for="pricePen"
-              [error]="errors()['pricePen']"
-            >
-              <input
-                id="pricePen"
-                class="input"
-                type="number"
-                min="0"
-                step="0.0001"
-                formControlName="pricePen"
-                (input)="onPriceInput($any($event.target).value)"
-              />
-            </ui-field>
-            <ui-field label="Precio de venta (S/ con IGV)" for="priceWithIgv" [hint]="igvHint()">
-              <input
-                id="priceWithIgv"
-                class="input"
-                type="number"
-                min="0"
-                step="0.01"
-                [value]="priceWithIgv()"
-                (input)="onPriceWithIgvInput($any($event.target).value)"
-              />
-            </ui-field>
-          </div>
-
-          <dl
-            class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4"
-            aria-live="polite"
-          >
-            <div>
-              <dt class="text-xs text-slate-500">Precio sin IGV</dt>
-              <dd class="font-medium tabular-nums">{{ retailBreakdown()?.pricePen | pen }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">IGV</dt>
-              <dd class="font-medium tabular-nums">{{ retailBreakdown()?.igvPen | pen }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Precio con IGV</dt>
-              <dd class="font-medium tabular-nums">
-                {{ retailBreakdown()?.priceWithIgvPen | pen }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Margen estimado</dt>
-              <dd
-                class="font-medium tabular-nums"
-                [class]="
-                  marginPercent() === null
-                    ? 'text-slate-400'
-                    : marginPercent()! >= 0
-                      ? 'text-emerald-700'
-                      : 'text-rose-600'
-                "
+            <ng-container *appCan="'products.prices.view'">
+              <div></div>
+              <ui-field
+                label="Precio de venta (S/ sin IGV)"
+                for="pricePen"
+                [error]="errors()['pricePen']"
               >
-                @if (marginPercent() !== null) {
-                  {{ marginPercent()! >= 0 ? '+' : '' }}{{ marginPercent() }}%
-                } @else {
-                  —
-                }
-              </dd>
-            </div>
-          </dl>
-
-          <div class="mt-4 grid gap-4 md:grid-cols-2">
-            <ui-field
-              label="Precio por mayor (S/ con IGV)"
-              for="wholesaleWithIgv"
-              [hint]="wholesaleHint()"
-              [error]="errors()['wholesalePricePen']"
-            >
-              <input
-                id="wholesaleWithIgv"
-                class="input"
-                type="number"
-                min="0"
-                step="0.01"
-                [value]="wholesaleWithIgv()"
-                (input)="onWholesaleWithIgvInput($any($event.target).value)"
-              />
-            </ui-field>
-            <ui-field
-              label="Cantidad mínima por mayor"
-              for="wholesaleMinQty"
-              [error]="errors()['wholesaleMinQty']"
-            >
-              <input
-                id="wholesaleMinQty"
-                class="input"
-                type="number"
-                min="1"
-                step="1"
-                formControlName="wholesaleMinQty"
-              />
-            </ui-field>
+                <input
+                  id="pricePen"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  formControlName="pricePen"
+                  (input)="onPriceInput($any($event.target).value)"
+                />
+              </ui-field>
+              <ui-field label="Precio de venta (S/ con IGV)" for="priceWithIgv" [hint]="igvHint()">
+                <input
+                  id="priceWithIgv"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="priceWithIgv()"
+                  (input)="onPriceWithIgvInput($any($event.target).value)"
+                />
+              </ui-field>
+            </ng-container>
           </div>
-          @if (wholesaleMinQtyMissing()) {
-            <p class="mt-2 text-sm text-rose-600" role="alert">
-              Indica la cantidad mínima para el precio por mayor.
-            </p>
-          }
+
+          <ng-container *appCan="'products.prices.view'">
+            <dl
+              class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4"
+              aria-live="polite"
+            >
+              <div>
+                <dt class="text-xs text-slate-500">Precio sin IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retailBreakdown()?.pricePen | pen }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retailBreakdown()?.igvPen | pen }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">Precio con IGV</dt>
+                <dd class="font-medium tabular-nums">
+                  {{ retailBreakdown()?.priceWithIgvPen | pen }}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">Margen estimado</dt>
+                <dd
+                  class="font-medium tabular-nums"
+                  [class]="
+                    marginPercent() === null
+                      ? 'text-slate-400'
+                      : marginPercent()! >= 0
+                        ? 'text-emerald-700'
+                        : 'text-rose-600'
+                  "
+                >
+                  @if (marginPercent() !== null) {
+                    {{ marginPercent()! >= 0 ? '+' : '' }}{{ marginPercent() }}%
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+            </dl>
+
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+              <ui-field
+                label="Precio por mayor (S/ con IGV)"
+                for="wholesaleWithIgv"
+                [hint]="wholesaleHint()"
+                [error]="errors()['wholesalePricePen']"
+              >
+                <input
+                  id="wholesaleWithIgv"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="wholesaleWithIgv()"
+                  (input)="onWholesaleWithIgvInput($any($event.target).value)"
+                />
+              </ui-field>
+              <ui-field
+                label="Cantidad mínima por mayor"
+                for="wholesaleMinQty"
+                [error]="errors()['wholesaleMinQty']"
+              >
+                <input
+                  id="wholesaleMinQty"
+                  class="input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  formControlName="wholesaleMinQty"
+                />
+              </ui-field>
+            </div>
+            @if (wholesaleMinQtyMissing()) {
+              <p class="mt-2 text-sm text-rose-600" role="alert">
+                Indica la cantidad mínima para el precio por mayor.
+              </p>
+            }
+          </ng-container>
         </section>
 
         <section class="card p-4">
@@ -358,6 +370,7 @@ export class ProductFormPage {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly pricing = inject(PricingService);
+  private readonly config = inject(ClientConfigService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   // The router passes `undefined` on /products/new; numberAttribute would turn that into NaN.
@@ -494,12 +507,12 @@ export class ProductFormPage {
       isActive: product.isActive,
       isConsignment: product.isConsignment,
     });
-    this.priceSignal.set(product.pricePen);
-    this.costSignal.set(product.costPen);
-    this.wholesaleSignal.set(product.wholesalePricePen);
-    this.priceWithIgv.set(product.pricePen === null ? null : this.withIgv(product.pricePen));
+    this.priceSignal.set(product.pricePen ?? null);
+    this.costSignal.set(product.costPen ?? null);
+    this.wholesaleSignal.set(product.wholesalePricePen ?? null);
+    this.priceWithIgv.set(product.pricePen == null ? null : this.withIgv(product.pricePen));
     this.wholesaleWithIgv.set(
-      product.wholesalePricePen === null ? null : this.withIgv(product.wholesalePricePen),
+      product.wholesalePricePen == null ? null : this.withIgv(product.wholesalePricePen),
     );
     this.selectedEquipment.set(new Set(product.equipment.map((model) => model.id)));
   }
@@ -573,16 +586,18 @@ export class ProductFormPage {
       minStock: Number(value.minStock) || 0,
       reorderQuantity: Number(value.reorderQuantity) || 0,
       location: value.location.trim() || null,
-      costPen: value.costPen ?? null,
-      pricePen: value.pricePen ?? null,
-      wholesalePricePen,
-      wholesaleMinQty: wholesalePricePen === null ? null : wholesaleMinQty,
       isConsignment: value.isConsignment,
       notes: value.notes.trim() || null,
       isActive: value.isActive,
       equipmentIds: [...this.selectedEquipment()],
     };
     if (code) payload.code = code;
+    if (this.config.canSeeCosts()) payload.costPen = value.costPen ?? null;
+    if (this.config.canSeePrices()) {
+      payload.pricePen = value.pricePen ?? null;
+      payload.wholesalePricePen = wholesalePricePen;
+      payload.wholesaleMinQty = wholesalePricePen === null ? null : wholesaleMinQty;
+    }
 
     this.pending.set(true);
     this.serverError.set(null);

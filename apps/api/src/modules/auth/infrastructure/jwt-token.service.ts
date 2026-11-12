@@ -2,10 +2,15 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ENV, type Env } from '../../../config/env.js';
 import { Role, type AuthenticatedUser } from '../../../shared/domain/auth.js';
-import { TokenService, type TokenPair } from '../application/ports/token.service.js';
+import {
+  TokenService,
+  type RefreshClaims,
+  type TokenPair,
+} from '../application/ports/token.service.js';
 
 interface AccessPayload {
   sub: string;
+  cid: number;
   typ: 'access';
   email: string;
   name: string;
@@ -14,6 +19,7 @@ interface AccessPayload {
 
 interface RefreshPayload {
   sub: string;
+  cid: number;
   typ: 'refresh';
 }
 
@@ -29,12 +35,13 @@ export class JwtTokenService extends TokenService {
   async issue(user: AuthenticatedUser): Promise<TokenPair> {
     const access: AccessPayload = {
       sub: String(user.id),
+      cid: user.companyId,
       typ: 'access',
       email: user.email,
       name: user.name,
       role: user.role,
     };
-    const refresh: RefreshPayload = { sub: String(user.id), typ: 'refresh' };
+    const refresh: RefreshPayload = { sub: String(user.id), cid: user.companyId, typ: 'refresh' };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(access, {
         secret: this.env.JWT_ACCESS_SECRET,
@@ -50,18 +57,20 @@ export class JwtTokenService extends TokenService {
 
   async verifyAccess(token: string): Promise<AuthenticatedUser | null> {
     const payload = await this.verify<AccessPayload>(token, this.env.JWT_ACCESS_SECRET);
-    if (payload?.typ !== 'access') return null;
+    if (payload?.typ !== 'access' || !Number.isInteger(payload.cid)) return null;
     return {
       id: Number(payload.sub),
+      companyId: payload.cid,
       email: payload.email,
       name: payload.name,
       role: payload.role,
     };
   }
 
-  async verifyRefresh(token: string): Promise<number | null> {
+  async verifyRefresh(token: string): Promise<RefreshClaims | null> {
     const payload = await this.verify<RefreshPayload>(token, this.env.JWT_REFRESH_SECRET);
-    return payload?.typ === 'refresh' ? Number(payload.sub) : null;
+    if (payload?.typ !== 'refresh' || !Number.isInteger(payload.cid)) return null;
+    return { userId: Number(payload.sub), companyId: payload.cid };
   }
 
   private async verify<T extends object>(token: string, secret: string): Promise<T | null> {

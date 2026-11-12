@@ -1,4 +1,4 @@
-import { count } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import type { Database } from '../shared/infrastructure/database/database.service.js';
 import {
   productEquipment,
@@ -127,18 +127,21 @@ const SAMPLES: Sample[] = [
 const LOAD_NOTE = 'Sample catalogue';
 const LOAD_DATE = new Date('2026-09-30T12:00:00.000-05:00');
 
-const { db, close } = openScriptContext();
+const { db, company, close } = openScriptContext();
 
 try {
   if (process.env.NODE_ENV === 'production')
     throw new Error('seed-sample-products must not run in production');
 
-  const [existing] = await db.select({ value: count() }).from(products);
+  const [existing] = await db
+    .select({ value: count() })
+    .from(products)
+    .where(eq(products.companyId, company.id));
   if (Number(existing?.value ?? 0) > 0)
     throw new Error('Products already exist. Sample products only load into an empty catalogue.');
 
-  const categoryIds = await ensureTaxonomy(db);
-  const equipmentIds = await ensureEquipment(db);
+  const categoryIds = await ensureTaxonomy(db, company.id);
+  const equipmentIds = await ensureEquipment(db, company.id);
 
   await db.transaction(async (transaction) => {
     const tx = transaction as unknown as Database;
@@ -147,10 +150,13 @@ try {
       SAMPLES.map(([code, name, categorySlug, unit, stock]) => {
         const categoryId = categoryIds.get(categorySlug);
         if (categoryId === undefined) throw new Error(`Unknown category: ${categorySlug}`);
-        return { code, name, categoryId, unit, stock };
+        return { companyId: company.id, code, name, categoryId, unit, stock };
       }),
     );
-    const rows = await tx.select({ id: products.id, code: products.code }).from(products);
+    const rows = await tx
+      .select({ id: products.id, code: products.code })
+      .from(products)
+      .where(eq(products.companyId, company.id));
     const idByCode = new Map(rows.map((row) => [row.code, row.id]));
 
     const links = SAMPLES.flatMap(([code, , , , , equipment]) =>
@@ -163,6 +169,7 @@ try {
     await tx.insert(productEquipment).values(links);
 
     const movements = SAMPLES.filter(([, , , , stock]) => stock > 0).map(([code, , , , stock]) => ({
+      companyId: company.id,
       productId: idByCode.get(code) as number,
       type: 'IN' as const,
       reason: 'INITIAL_LOAD',

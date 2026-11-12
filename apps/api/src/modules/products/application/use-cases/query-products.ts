@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { MoneyVisibility } from '../../../../shared/application/money-visibility.js';
 import type { Page, PageRequest } from '../../../../shared/application/page.js';
 import { SpreadsheetWriter } from '../../../../shared/application/spreadsheet-writer.js';
 import { NotFoundError } from '../../../../shared/domain/errors.js';
@@ -57,6 +58,8 @@ export class GetProduct {
 
 const STATUS_LABEL = { OUT: 'Sin stock', LOW: 'Bajo', OK: 'OK' } as const;
 const MONEY = '#,##0.00';
+const COST_COLUMNS = new Set(['cost', 'costValue']);
+const PRICE_COLUMNS = new Set(['price', 'priceWithIgv', 'priceValue']);
 
 @Injectable()
 export class ExportProducts {
@@ -66,12 +69,16 @@ export class ExportProducts {
     private readonly spreadsheet: SpreadsheetWriter,
   ) {}
 
-  async execute(filters: ProductFilters): Promise<Buffer> {
+  async execute(filters: ProductFilters, visibility: MoneyVisibility): Promise<Buffer> {
     const [items, settings] = await Promise.all([
       this.products.searchAll(filters, EXPORT_LIMIT),
       this.pricingSettings.execute(),
     ]);
-    return this.spreadsheet.write({
+    const hidden = new Set<string>([
+      ...(visibility.costs ? [] : COST_COLUMNS),
+      ...(visibility.prices ? [] : PRICE_COLUMNS),
+    ]);
+    const spec = {
       name: 'Inventario',
       columns: [
         { header: 'Código', key: 'code', width: 20 },
@@ -114,6 +121,10 @@ export class ExportProducts {
           priceValue: item.pricePen == null ? null : item.pricePen * item.stock,
         };
       }),
+    };
+    return this.spreadsheet.write({
+      ...spec,
+      columns: spec.columns.filter((column) => !hidden.has(column.key)),
     });
   }
 }

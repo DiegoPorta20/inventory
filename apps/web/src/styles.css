@@ -68,7 +68,7 @@
     @apply outline-2 outline-offset-2 outline-brand-500;
   }
   ::selection {
-    background: rgb(1 171 206 / 0.28);
+    background: color-mix(in srgb, var(--color-accent-500) 28%, transparent);
   }
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']) {
@@ -131,7 +131,7 @@
     border-color: rgb(16 26 56 / 0.28);
   }
   .input:focus {
-    box-shadow: 0 0 0 3px rgb(58 88 173 / 0.18);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 18%, transparent);
   }
   /* Search boxes and toolbar filters are pills; form fields keep the 12px control radius. */
   .input-pill {
