@@ -24,7 +24,7 @@ pnpm db:import-excel          # opcional: carga data/inventory.xlsx
 pnpm db:import-prices         # opcional: aplica data/Precios*.xlsx (precios, centros de costo, consignación)
 pnpm db:seed-sample           # solo desarrollo, sin Excel: 52 productos de ejemplo (usar en lugar de db:import-excel)
 pnpm db:seed-demo             # solo desarrollo: datos aleatorios para que todas las pantallas tengan información
-pnpm dev                      # API http://localhost:3000 + web http://localhost:4200
+pnpm dev                      # API http://localhost:3200 + web http://localhost:4300
 ```
 
 `db:seed-demo` completa precios, costos, stock mínimo, ubicaciones y centros de costo faltantes, y crea proveedores, 4 importaciones (pedido, en tránsito, borrador, recibida), ventas recientes y un conteo físico. Es determinista y se niega a correr en producción o si ya hay datos demo; para repetirlo: `pnpm db:import-excel --reset && pnpm db:import-prices && pnpm db:seed-demo`.

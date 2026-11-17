@@ -26,7 +26,14 @@ src/app/
 ## Commands
 
 ```
-pnpm --filter @inventory/web dev      # ng serve with /api proxy to :3000
+pnpm --filter @inventory/web dev      # ng serve on :4300 with /api proxy to :3200
 pnpm --filter @inventory/web build
 pnpm --filter @inventory/web test
 ```
+
+## Company config (branding, modules, permissions)
+
+- Sign-in lives at `/:company/login` (matched by a `UrlMatcher`; route names in `APP_PATHS` are reserved). `/login` asks for the company code and redirects.
+- `ClientConfigService` loads `GET /api/config` (role, enabled modules, permissions, branding). `BrandingService` paints it through CSS variables, title, favicon and logo.
+- Hide UI with `*appCan="'products.update'"` / `*appCanAny`; routes use `moduleGuard`, the landing route uses `homeGuard`. The server is the real gate (fail-closed `PermissionsGuard`); never rely on hiding alone.
+- Cost and price fields arrive stripped when the user lacks `products.costs.view` / `products.prices.view`: treat them as optional and do not send them on writes.
