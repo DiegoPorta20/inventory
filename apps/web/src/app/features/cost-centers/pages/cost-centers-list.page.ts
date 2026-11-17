@@ -16,10 +16,12 @@ import {
 import { ToastService } from '../../../shared/ui/toast.service';
 import { openCostCenterDialog } from '../components/cost-center.dialog';
 import { CostCentersApi } from '../cost-centers.api';
+import { CanDirective } from '../../../core/config/can.directive';
 
 @Component({
   selector: 'app-cost-centers-list-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     IconComponent,
@@ -34,7 +36,12 @@ import { CostCentersApi } from '../cost-centers.api';
       title="Centros de costo"
       subtitle="Líneas de negocio a las que se asignan los productos."
     >
-      <button type="button" class="btn btn-primary magnetic" (click)="openCreate()">
+      <button
+        *appCan="'cost-centers.manage'"
+        type="button"
+        class="btn btn-primary magnetic"
+        (click)="openCreate()"
+      >
         <ui-icon name="plus" [size]="4" /> Nuevo centro de costo
       </button>
     </ui-page-header>
@@ -54,7 +61,12 @@ import { CostCentersApi } from '../cost-centers.api';
           title="No hay centros de costo"
           description="Crea centros de costo para clasificar los productos por línea de negocio."
         >
-          <button type="button" class="btn btn-primary" (click)="openCreate()">
+          <button
+            *appCan="'cost-centers.manage'"
+            type="button"
+            class="btn btn-primary"
+            (click)="openCreate()"
+          >
             <ui-icon name="plus" [size]="4" /> Nuevo centro de costo
           </button>
         </ui-empty-state>
@@ -86,6 +98,7 @@ import { CostCentersApi } from '../cost-centers.api';
                         <ui-icon name="box" [size]="4" /> Productos
                       </a>
                       <button
+                        *appCan="'cost-centers.manage'"
                         type="button"
                         class="btn btn-ghost btn-icon"
                         aria-label="Renombrar"
@@ -94,6 +107,7 @@ import { CostCentersApi } from '../cost-centers.api';
                         <ui-icon name="edit" [size]="4" />
                       </button>
                       <button
+                        *appCan="'cost-centers.manage'"
                         type="button"
                         class="btn btn-ghost btn-icon text-rose-600"
                         aria-label="Eliminar"

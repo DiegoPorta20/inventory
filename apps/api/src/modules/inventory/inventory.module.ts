@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CategoriesModule } from '../categories/categories.module.js';
 import { ProductsModule } from '../products/products.module.js';
 import { StockCountRepository } from './application/ports/stock-count.repository.js';
 import { StockMovementRepository } from './application/ports/stock-movement.repository.js';
@@ -24,7 +25,7 @@ import { StockCountsController } from './presentation/stock-counts.controller.js
 import { StockMovementsController } from './presentation/stock-movements.controller.js';
 
 @Module({
-  imports: [ProductsModule],
+  imports: [ProductsModule, CategoriesModule],
   controllers: [StockMovementsController, StockCountsController],
   providers: [
     StockLedger,

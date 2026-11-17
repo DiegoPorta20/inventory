@@ -2,6 +2,7 @@ import type { Role } from '../../../shared/domain/auth.js';
 
 export interface User {
   id: number;
+  companyId: number;
   email: string;
   name: string;
   passwordHash: string;
@@ -12,9 +13,13 @@ export interface User {
   updatedAt: Date;
 }
 
-export type PublicUser = Omit<User, 'passwordHash'>;
+export type PublicUser = Omit<User, 'passwordHash' | 'companyId'>;
 
-export function toPublicUser({ passwordHash: _omitted, ...user }: User): PublicUser {
+export function toPublicUser({
+  passwordHash: _passwordHash,
+  companyId: _companyId,
+  ...user
+}: User): PublicUser {
   return user;
 }
 

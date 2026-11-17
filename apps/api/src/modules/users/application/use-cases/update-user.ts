@@ -4,6 +4,7 @@ import { BusinessRuleError, NotFoundError } from '../../../../shared/domain/erro
 import { toPublicUser, type PublicUser } from '../../domain/user.js';
 import { PasswordHasher } from '../ports/password-hasher.js';
 import { UserRepository, type UserChanges } from '../ports/user.repository.js';
+import { UserLimit } from '../user-limit.js';
 
 export interface UpdateUserInput {
   name?: string;
@@ -17,6 +18,7 @@ export class UpdateUser {
   constructor(
     private readonly users: UserRepository,
     private readonly hasher: PasswordHasher,
+    private readonly limit: UserLimit,
   ) {}
 
   async execute(actorId: number, id: number, input: UpdateUserInput): Promise<PublicUser> {
@@ -32,6 +34,8 @@ export class UpdateUser {
         'You cannot deactivate or change your own role',
       );
     }
+
+    if (input.isActive === true && !existing.isActive) await this.limit.assertCanAddActiveUser();
 
     const changes: UserChanges = {
       name: input.name?.trim(),

@@ -18,6 +18,7 @@ import {
 import { useQueryFilters } from '../../../shared/util/query-filters';
 import { CountsApi } from '../counts.api';
 import { openNewCountDialog } from '../new-count.dialog';
+import { CanDirective } from '../../../core/config/can.directive';
 
 const PAGE_SIZE = 25;
 const FILTER_DEFAULTS = { status: '', page: 1 };
@@ -25,6 +26,7 @@ const FILTER_DEFAULTS = { status: '', page: 1 };
 @Component({
   selector: 'app-counts-list-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -41,7 +43,12 @@ const FILTER_DEFAULTS = { status: '', page: 1 };
       title="Conteos físicos"
       subtitle="Toma de inventario y ajustes por diferencias."
     >
-      <button type="button" class="btn btn-primary magnetic" (click)="create()">
+      <button
+        *appCan="'counts.create'"
+        type="button"
+        class="btn btn-primary magnetic"
+        (click)="create()"
+      >
         <ui-icon name="plus" [size]="4" /> Nuevo conteo
       </button>
     </ui-page-header>
@@ -79,7 +86,12 @@ const FILTER_DEFAULTS = { status: '', page: 1 };
             title="Sin conteos"
             description="Inicia un conteo físico para verificar el stock contra el sistema."
           >
-            <button type="button" class="btn btn-primary" (click)="create()">
+            <button
+              *appCan="'counts.create'"
+              type="button"
+              class="btn btn-primary"
+              (click)="create()"
+            >
               <ui-icon name="plus" [size]="4" /> Nuevo conteo
             </button>
           </ui-empty-state>

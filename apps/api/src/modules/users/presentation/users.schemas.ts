@@ -7,7 +7,7 @@ export const createUserSchema = z.strictObject({
   email: z.string().trim().email().max(190),
   name: z.string().trim().min(1).max(120),
   password,
-  role: z.enum(Role).default(Role.ADMIN),
+  role: z.enum(Role).default(Role.PERSONAL),
 });
 
 export const updateUserSchema = z.strictObject({

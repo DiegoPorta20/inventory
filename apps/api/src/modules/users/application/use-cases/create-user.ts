@@ -4,6 +4,7 @@ import { ConflictError } from '../../../../shared/domain/errors.js';
 import { normalizeEmail, toPublicUser, type PublicUser } from '../../domain/user.js';
 import { PasswordHasher } from '../ports/password-hasher.js';
 import { UserRepository } from '../ports/user.repository.js';
+import { UserLimit } from '../user-limit.js';
 
 export interface CreateUserInput {
   email: string;
@@ -17,6 +18,7 @@ export class CreateUser {
   constructor(
     private readonly users: UserRepository,
     private readonly hasher: PasswordHasher,
+    private readonly limit: UserLimit,
   ) {}
 
   async execute(input: CreateUserInput): Promise<PublicUser> {
@@ -24,6 +26,7 @@ export class CreateUser {
     if (await this.users.findByEmail(email)) {
       throw new ConflictError('A user with this email already exists');
     }
+    await this.limit.assertCanAddActiveUser();
     const user = await this.users.create({
       email,
       name: input.name.trim(),

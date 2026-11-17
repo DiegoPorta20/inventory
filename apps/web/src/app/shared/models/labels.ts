@@ -89,6 +89,7 @@ export const COUNT_STATUS_TONES: Record<StockCountStatus, Tone> = {
 
 export const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
+  PERSONAL: 'Personal',
 };
 
 export const entries = <K extends string>(

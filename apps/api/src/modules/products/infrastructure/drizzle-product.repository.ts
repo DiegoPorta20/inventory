@@ -31,6 +31,7 @@ import {
   stockMovements,
 } from '../../../shared/infrastructure/database/schema.js';
 import { incomingQtySql } from '../../../shared/infrastructure/database/sql-fragments.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import {
   ProductRepository,
   type BulkProductChanges,
@@ -84,8 +85,15 @@ const escapeLike = (value: string): string => value.replace(/[\\%_]/g, '\\$&');
 
 @Injectable()
 export class DrizzleProductRepository extends ProductRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
+  }
+
+  private get inCompany() {
+    return eq(products.companyId, this.tenant.companyId);
   }
 
   async search(filters: ProductFilters, page: PageRequest): Promise<Page<ProductListItem>> {
@@ -104,7 +112,7 @@ export class DrizzleProductRepository extends ProductRepository {
     const [row] = await this.database.db
       .select()
       .from(products)
-      .where(eq(products.id, id))
+      .where(and(eq(products.id, id), this.inCompany))
       .limit(1);
     return row ? toProduct(row) : null;
   }
@@ -113,7 +121,7 @@ export class DrizzleProductRepository extends ProductRepository {
     const [row] = await this.database.db
       .select()
       .from(products)
-      .where(eq(products.id, id))
+      .where(and(eq(products.id, id), this.inCompany))
       .limit(1)
       .for('update');
     return row ? toProduct(row) : null;
@@ -123,7 +131,7 @@ export class DrizzleProductRepository extends ProductRepository {
     const [row] = await this.database.db
       .select()
       .from(products)
-      .where(eq(products.code, code))
+      .where(and(eq(products.code, code), this.inCompany))
       .limit(1);
     return row ? toProduct(row) : null;
   }
@@ -133,7 +141,7 @@ export class DrizzleProductRepository extends ProductRepository {
     const rows = await this.database.db
       .select()
       .from(products)
-      .where(inArray(products.code, codes));
+      .where(and(inArray(products.code, codes), this.inCompany));
     return rows.map(toProduct);
   }
 
@@ -151,7 +159,7 @@ export class DrizzleProductRepository extends ProductRepository {
       .leftJoin(categories, eq(categories.id, products.categoryId))
       .leftJoin(costCenters, eq(costCenters.id, products.costCenterId))
       .leftJoin(parent, eq(parent.id, categories.parentId))
-      .where(eq(products.id, id))
+      .where(and(eq(products.id, id), this.inCompany))
       .limit(1);
     if (!row) return null;
 
@@ -185,7 +193,7 @@ export class DrizzleProductRepository extends ProductRepository {
           ),
       })
       .from(products)
-      .where(like(products.code, 'INT-%'));
+      .where(and(like(products.code, 'INT-%'), this.inCompany));
     return (row?.value ?? 0) + 1;
   }
 
@@ -193,7 +201,9 @@ export class DrizzleProductRepository extends ProductRepository {
     return this.database.transaction(async () => {
       let id: number;
       try {
-        const [result] = await this.database.db.insert(products).values(draft);
+        const [result] = await this.database.db
+          .insert(products)
+          .values({ ...draft, companyId: this.tenant.companyId });
         id = result.insertId;
       } catch (error) {
         if (isDuplicateEntry(error))
@@ -207,12 +217,16 @@ export class DrizzleProductRepository extends ProductRepository {
 
   update(id: number, changes: ProductChanges, equipmentIds?: number[]): Promise<Product> {
     return this.database.transaction(async () => {
+      await this.requireById(id);
       const values = Object.fromEntries(
         Object.entries(changes).filter(([, value]) => value !== undefined),
       );
       try {
         if (Object.keys(values).length > 0) {
-          await this.database.db.update(products).set(values).where(eq(products.id, id));
+          await this.database.db
+            .update(products)
+            .set(values)
+            .where(and(eq(products.id, id), this.inCompany));
         }
       } catch (error) {
         if (isDuplicateEntry(error)) throw new ConflictError('Product code already exists');
@@ -230,19 +244,24 @@ export class DrizzleProductRepository extends ProductRepository {
     const [result] = await this.database.db
       .update(products)
       .set(values)
-      .where(inArray(products.id, ids));
+      .where(and(inArray(products.id, ids), this.inCompany));
     return result.affectedRows;
   }
 
   async setStock(id: number, stock: number): Promise<void> {
-    await this.database.db.update(products).set({ stock }).where(eq(products.id, id));
+    await this.database.db
+      .update(products)
+      .set({ stock })
+      .where(and(eq(products.id, id), this.inCompany));
   }
 
   async hasHistory(id: number): Promise<boolean> {
     const [movement] = await this.database.db
       .select({ id: stockMovements.id })
       .from(stockMovements)
-      .where(eq(stockMovements.productId, id))
+      .where(
+        and(eq(stockMovements.productId, id), eq(stockMovements.companyId, this.tenant.companyId)),
+      )
       .limit(1);
     if (movement) return true;
     const [line] = await this.database.db
@@ -254,7 +273,7 @@ export class DrizzleProductRepository extends ProductRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await this.database.db.delete(products).where(eq(products.id, id));
+    await this.database.db.delete(products).where(and(eq(products.id, id), this.inCompany));
   }
 
   private listQuery(where: SQL | undefined, filters: ProductFilters) {
@@ -275,7 +294,7 @@ export class DrizzleProductRepository extends ProductRepository {
   }
 
   private conditions(filters: ProductFilters): SQL[] {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [this.inCompany];
 
     for (const word of (filters.search ?? '').split(/\s+/).filter(Boolean)) {
       const term = `%${escapeLike(word)}%`;

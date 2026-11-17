@@ -12,6 +12,13 @@ import {
   Query,
   StreamableFile,
 } from '@nestjs/common';
+import type { Access } from '../../../shared/domain/access.js';
+import {
+  CurrentAccess,
+  RequireAnyPermission,
+  RequirePermission,
+} from '../../../shared/presentation/decorators.js';
+import { assertMoneyWritable, visibilityOf } from '../../../shared/presentation/money-guard.js';
 import { ZodValidationPipe } from '../../../shared/presentation/zod-validation.pipe.js';
 import { XLSX_CONTENT_TYPE } from '../../../shared/presentation/http.js';
 import { BulkUpdateProducts } from '../application/use-cases/bulk-update-products.js';
@@ -51,19 +58,31 @@ export class ProductsController {
   ) {}
 
   @Get()
+  @RequireAnyPermission(
+    'products.view',
+    'movements.view',
+    'movements.create',
+    'imports.create',
+    'imports.update',
+  )
   list(@Query(new ZodValidationPipe(listProductsSchema)) query: ListProductsQuery) {
     const { page, pageSize, ...filters } = query;
     return this.searchProducts.execute(filters, { page, pageSize });
   }
 
   @Get('export')
+  @RequirePermission('products.export')
   @Header('Content-Type', XLSX_CONTENT_TYPE)
   @Header('Content-Disposition', 'attachment; filename="inventario.xlsx"')
-  async export(@Query(new ZodValidationPipe(exportProductsSchema)) query: ExportProductsQuery) {
-    return new StreamableFile(await this.exportProducts.execute(query));
+  async export(
+    @CurrentAccess() access: Access,
+    @Query(new ZodValidationPipe(exportProductsSchema)) query: ExportProductsQuery,
+  ) {
+    return new StreamableFile(await this.exportProducts.execute(query, visibilityOf(access)));
   }
 
   @Get('price-list/export')
+  @RequirePermission('products.export', 'products.prices.view')
   @Header('Content-Type', XLSX_CONTENT_TYPE)
   @Header('Content-Disposition', 'attachment; filename="lista-de-precios.xlsx"')
   async priceList(@Query(new ZodValidationPipe(exportProductsSchema)) query: ExportProductsQuery) {
@@ -71,29 +90,52 @@ export class ProductsController {
   }
 
   @Patch('bulk')
+  @RequirePermission('products.update')
   bulkUpdate(@Body(new ZodValidationPipe(bulkUpdateProductsSchema)) body: BulkUpdateProductsBody) {
     return this.bulkUpdateProducts.execute(body.ids, body.changes);
   }
 
   @Get(':id')
+  @RequireAnyPermission(
+    'products.view',
+    'movements.view',
+    'movements.create',
+    'imports.create',
+    'imports.update',
+  )
   get(@Param('id', ParseIntPipe) id: number) {
     return this.getProduct.execute(id);
   }
 
   @Post()
-  create(@Body(new ZodValidationPipe(createProductSchema)) body: CreateProductBody) {
+  @RequirePermission('products.create')
+  create(
+    @CurrentAccess() access: Access,
+    @Body(new ZodValidationPipe(createProductSchema)) body: CreateProductBody,
+  ) {
+    assertMoneyWritable(access, {
+      costs: [body.costPen],
+      prices: [body.pricePen, body.wholesalePricePen, body.wholesaleMinQty],
+    });
     return this.createProduct.execute(body);
   }
 
   @Patch(':id')
+  @RequirePermission('products.update')
   update(
+    @CurrentAccess() access: Access,
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(updateProductSchema)) body: UpdateProductBody,
   ) {
+    assertMoneyWritable(access, {
+      costs: [body.costPen],
+      prices: [body.pricePen, body.wholesalePricePen, body.wholesaleMinQty],
+    });
     return this.updateProduct.execute(id, body);
   }
 
   @Delete(':id')
+  @RequirePermission('products.delete')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.deleteProduct.execute(id);

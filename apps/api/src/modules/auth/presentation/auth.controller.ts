@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import type { AuthenticatedUser } from '../../../shared/domain/auth.js';
-import { CurrentUser, Public } from '../../../shared/presentation/decorators.js';
+import { Authenticated, CurrentUser, Public } from '../../../shared/presentation/decorators.js';
 import { ZodValidationPipe } from '../../../shared/presentation/zod-validation.pipe.js';
 import { ChangePassword } from '../application/use-cases/change-password.js';
 import { GetCurrentUser } from '../application/use-cases/get-current-user.js';
@@ -58,11 +58,13 @@ export class AuthController {
   }
 
   @Get('me')
+  @Authenticated()
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.getCurrentUser.execute(user.id);
   }
 
   @Post('change-password')
+  @Authenticated()
   @HttpCode(204)
   async updatePassword(
     @CurrentUser() user: AuthenticatedUser,

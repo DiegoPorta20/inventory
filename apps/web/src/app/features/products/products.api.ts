@@ -56,10 +56,11 @@ export interface ProductInput {
   minStock: number;
   reorderQuantity: number;
   location: string | null;
-  costPen: number | null;
-  pricePen: number | null;
-  wholesalePricePen: number | null;
-  wholesaleMinQty: number | null;
+  /** Money fields are left out when the user may not see them. */
+  costPen?: number | null;
+  pricePen?: number | null;
+  wholesalePricePen?: number | null;
+  wholesaleMinQty?: number | null;
   isConsignment: boolean;
   notes: string | null;
   isActive: boolean;

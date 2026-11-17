@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UnitOfWork } from '../../../../shared/application/unit-of-work.js';
 import type { Page, PageRequest } from '../../../../shared/application/page.js';
 import { BusinessRuleError, NotFoundError } from '../../../../shared/domain/errors.js';
+import { CategoryRepository } from '../../../categories/application/ports/category.repository.js';
 import {
   assertOpen,
   type StockCount,
@@ -25,12 +26,18 @@ async function requireCount(counts: StockCountRepository, id: number): Promise<S
 
 @Injectable()
 export class CreateStockCount {
-  constructor(private readonly counts: StockCountRepository) {}
+  constructor(
+    private readonly counts: StockCountRepository,
+    private readonly categories: CategoryRepository,
+  ) {}
 
   async execute(
     input: { name: string; categoryId?: number | null; note?: string | null },
     userId: number,
   ): Promise<StockCountDetail> {
+    if (input.categoryId && !(await this.categories.findById(input.categoryId))) {
+      throw new NotFoundError('Category', input.categoryId);
+    }
     const count = await this.counts.createWithSnapshot({
       name: input.name,
       categoryId: input.categoryId ?? null,

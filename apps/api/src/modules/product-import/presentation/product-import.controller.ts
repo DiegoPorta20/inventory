@@ -9,8 +9,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BusinessRuleError, ValidationError } from '../../../shared/domain/errors.js';
-import { Role, type AuthenticatedUser } from '../../../shared/domain/auth.js';
-import { CurrentUser, Roles } from '../../../shared/presentation/decorators.js';
+import type { AuthenticatedUser } from '../../../shared/domain/auth.js';
+import { CurrentUser, RequirePermission } from '../../../shared/presentation/decorators.js';
 import { XLSX_CONTENT_TYPE } from '../../../shared/presentation/http.js';
 import {
   DownloadProductImportTemplate,
@@ -37,7 +37,7 @@ function requireWorkbook(file: UploadedSpreadsheet | undefined): Buffer {
 }
 
 @Controller('products/import')
-@Roles(Role.ADMIN)
+@RequirePermission('products.import', 'products.costs.view', 'products.prices.view')
 export class ProductImportController {
   constructor(
     private readonly downloadTemplate: DownloadProductImportTemplate,

@@ -25,6 +25,8 @@ import { DialogFrameComponent } from '../../shared/ui/dialog-frame.component';
 import { FieldComponent } from '../../shared/ui/layout.components';
 import { ProductPickerComponent } from '../../shared/ui/product-picker.component';
 import { ToastService } from '../../shared/ui/toast.service';
+import { CanDirective } from '../../core/config/can.directive';
+import { ClientConfigService } from '../../core/config/client-config.service';
 
 export interface RegisterMovementData {
   product?: Pick<ProductListItem, 'id' | 'code' | 'name' | 'stock' | 'unit'> &
@@ -46,6 +48,7 @@ export function openRegisterMovement(dialog: Dialog, data: RegisterMovementData 
 @Component({
   selector: 'app-register-movement-dialog',
   imports: [
+    CanDirective,
     ReactiveFormsModule,
     DialogFrameComponent,
     FieldComponent,
@@ -162,7 +165,11 @@ export function openRegisterMovement(dialog: Dialog, data: RegisterMovementData 
                 formControlName="counterparty"
                 maxlength="160"
             /></ui-field>
-            <ui-field label="Precio unitario (S/ sin IGV)" for="movement-price" [hint]="priceHint()"
+            <ui-field
+              *appCan="'products.prices.view'"
+              label="Precio unitario (S/ sin IGV)"
+              for="movement-price"
+              [hint]="priceHint()"
               ><input
                 id="movement-price"
                 class="input"
@@ -218,6 +225,7 @@ export class RegisterMovementDialog {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
   private readonly pricing = inject(PricingService);
+  private readonly config = inject(ClientConfigService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly types = TYPES;
@@ -324,7 +332,7 @@ export class RegisterMovementDialog {
         reason: value.reason,
         quantity: Number(value.quantity),
         counterparty: value.counterparty.trim() || null,
-        unitPricePen: value.unitPricePen ?? null,
+        unitPricePen: this.config.canSeePrices() ? (value.unitPricePen ?? null) : null,
         note: value.note.trim() || null,
       })
       .pipe(map(() => true))

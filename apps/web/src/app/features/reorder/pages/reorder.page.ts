@@ -19,10 +19,12 @@ import { EquipmentApi } from '../../equipment/equipment.api';
 import type { ImportNavigationState } from '../../imports/import-prefill';
 import { buildCategoryOptions } from '../../products/category-options';
 import { ReorderApi } from '../reorder.api';
+import { CanDirective } from '../../../core/config/can.directive';
 
 @Component({
   selector: 'app-reorder-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     StockBadgeComponent,
@@ -49,6 +51,7 @@ import { ReorderApi } from '../reorder.api';
         <ui-icon name="download" [size]="4" /> {{ exporting() ? 'Exportando…' : 'Exportar Excel' }}
       </button>
       <button
+        *appCan="'imports.create'"
         type="button"
         class="btn btn-primary"
         [disabled]="selectedCount() === 0"
@@ -66,6 +69,7 @@ import { ReorderApi } from '../reorder.api';
         [tone]="summary().outOfStock > 0 ? 'danger' : 'neutral'"
       />
       <ui-stat-card
+        *appCan="'products.costs.view'"
         label="Costo estimado"
         [value]="summary().estimatedCostPen | pen"
         hint="Según costos registrados"
@@ -164,8 +168,8 @@ import { ReorderApi } from '../reorder.api';
                 <th class="num">Stock / mín</th>
                 <th class="num">En camino</th>
                 <th class="num">Sugerido</th>
-                <th class="num">Costo unit.</th>
-                <th class="num">Costo estimado</th>
+                <th *appCan="'products.costs.view'" class="num">Costo unit.</th>
+                <th *appCan="'products.costs.view'" class="num">Costo estimado</th>
               </tr>
             </thead>
             <tbody>
@@ -210,17 +214,21 @@ import { ReorderApi } from '../reorder.api';
                       (input)="setQty(row.product.id, $any($event.target).value)"
                     />
                   </td>
-                  <td class="num text-slate-600">{{ row.product.costPen | pen: true }}</td>
-                  <td class="num font-medium">{{ estimated(row) | pen }}</td>
+                  <td *appCan="'products.costs.view'" class="num text-slate-600">
+                    {{ row.product.costPen | pen: true }}
+                  </td>
+                  <td *appCan="'products.costs.view'" class="num font-medium">
+                    {{ estimated(row) | pen }}
+                  </td>
                 </tr>
               }
             </tbody>
             <tfoot>
               <tr class="border-t border-slate-200 font-semibold">
                 <td colspan="6"></td>
-                <td class="num">Total selección</td>
-                <td></td>
-                <td class="num">{{ selectedCost() | pen }}</td>
+                <td *appCan="'products.costs.view'" class="num">Total selección</td>
+                <td *appCan="'products.costs.view'"></td>
+                <td *appCan="'products.costs.view'" class="num">{{ selectedCost() | pen }}</td>
               </tr>
             </tfoot>
           </table>

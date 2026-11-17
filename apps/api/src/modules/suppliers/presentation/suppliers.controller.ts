@@ -27,6 +27,10 @@ import {
   type ListSuppliersQuery,
   type UpdateSupplierBody,
 } from './suppliers.schemas.js';
+import {
+  RequireAnyPermission,
+  RequirePermission,
+} from '../../../shared/presentation/decorators.js';
 
 @Controller('suppliers')
 export class SuppliersController {
@@ -39,21 +43,25 @@ export class SuppliersController {
   ) {}
 
   @Get()
+  @RequireAnyPermission('suppliers.view', 'imports.view')
   list(@Query(new ZodValidationPipe(listSuppliersSchema)) query: ListSuppliersQuery) {
     return this.listSuppliers.execute(query);
   }
 
   @Get(':id')
+  @RequireAnyPermission('suppliers.view', 'imports.view')
   get(@Param('id', ParseIntPipe) id: number) {
     return this.getSupplier.execute(id);
   }
 
   @Post()
+  @RequirePermission('suppliers.manage')
   create(@Body(new ZodValidationPipe(createSupplierSchema)) body: CreateSupplierBody) {
     return this.createSupplier.execute(withDefaults(body));
   }
 
   @Patch(':id')
+  @RequirePermission('suppliers.manage')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(updateSupplierSchema)) body: UpdateSupplierBody,
@@ -62,6 +70,7 @@ export class SuppliersController {
   }
 
   @Delete(':id')
+  @RequirePermission('suppliers.manage')
   @HttpCode(204)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.deleteSupplier.execute(id);

@@ -14,10 +14,12 @@ import { ErrorStateComponent } from '../../../shared/ui/states.components';
 import { ToastService } from '../../../shared/ui/toast.service';
 import { openReceiveDialog } from '../components/receive-import.dialog';
 import { ImportsApi } from '../imports.api';
+import { CanDirective } from '../../../core/config/can.directive';
 
 @Component({
   selector: 'app-import-detail-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -66,17 +68,28 @@ import { ImportsApi } from '../imports.api';
           </button>
         }
         @if (canReceive(o.status)) {
-          <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="receive()">
+          <button
+            *appCan="'imports.receive'"
+            type="button"
+            class="btn btn-primary"
+            [disabled]="busy()"
+            (click)="receive()"
+          >
             <ui-icon name="download" [size]="4" /> Recibir mercadería
           </button>
         }
         @if (editable(o.status)) {
-          <a class="btn btn-secondary" [routerLink]="['/imports', o.id, 'edit']">
+          <a
+            *appCan="'imports.update'"
+            class="btn btn-secondary"
+            [routerLink]="['/imports', o.id, 'edit']"
+          >
             <ui-icon name="edit" [size]="4" /> Editar
           </a>
         }
         @if (isOpen(o.status)) {
           <button
+            *appCan="'imports.update'"
             type="button"
             class="btn btn-ghost text-rose-600"
             [disabled]="busy()"
@@ -87,6 +100,7 @@ import { ImportsApi } from '../imports.api';
         }
         @if (o.status === 'DRAFT') {
           <button
+            *appCan="'imports.delete'"
             type="button"
             class="btn btn-ghost text-rose-600"
             [disabled]="busy()"
@@ -116,8 +130,8 @@ import { ImportsApi } from '../imports.api';
                   <th>Producto</th>
                   <th class="num">Pedido</th>
                   <th class="num">Recibido</th>
-                  <th class="num">Costo unit.</th>
-                  <th class="num">Subtotal</th>
+                  <th *appCan="'products.costs.view'" class="num">Costo unit.</th>
+                  <th *appCan="'products.costs.view'" class="num">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
@@ -134,8 +148,10 @@ import { ImportsApi } from '../imports.api';
                     </td>
                     <td class="num">{{ item.quantityOrdered | quantity }}</td>
                     <td class="num">{{ item.quantityReceived | quantity }}</td>
-                    <td class="num">{{ item.unitCostPen | pen: true }}</td>
-                    <td class="num font-medium">
+                    <td *appCan="'products.costs.view'" class="num">
+                      {{ item.unitCostPen | pen: true }}
+                    </td>
+                    <td *appCan="'products.costs.view'" class="num font-medium">
                       {{ subtotal(item.quantityOrdered, item.unitCostPen) | pen }}
                     </td>
                   </tr>
@@ -146,8 +162,8 @@ import { ImportsApi } from '../imports.api';
                   <td>Total</td>
                   <td class="num">{{ o.totalOrdered | quantity }}</td>
                   <td class="num">{{ o.totalReceived | quantity }}</td>
-                  <td></td>
-                  <td class="num">{{ o.totalCostPen | pen }}</td>
+                  <td *appCan="'products.costs.view'"></td>
+                  <td *appCan="'products.costs.view'" class="num">{{ o.totalCostPen | pen }}</td>
                 </tr>
               </tfoot>
             </table>

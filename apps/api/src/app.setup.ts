@@ -6,12 +6,15 @@ import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import type { Env } from './config/env.js';
+import { TenantContext } from './shared/infrastructure/tenant/tenant-context.js';
 
 export const API_PREFIX = 'api';
 
 export function setupApp(app: NestExpressApplication, env: Env): void {
   app.setGlobalPrefix(API_PREFIX);
   app.use(cookieParser());
+  // Opens the per-request store that the auth guard later fills with the company id.
+  app.use(app.get(TenantContext).middleware());
   app.use(
     helmet({
       contentSecurityPolicy: {

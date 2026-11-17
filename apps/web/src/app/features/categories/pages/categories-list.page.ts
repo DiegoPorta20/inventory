@@ -17,6 +17,7 @@ import {
 import { ToastService } from '../../../shared/ui/toast.service';
 import { CategoriesApi } from '../categories.api';
 import { openCategoryDialog } from '../components/category.dialog';
+import { CanDirective } from '../../../core/config/can.directive';
 
 interface CategoryNode extends Category {
   children: Category[];
@@ -25,6 +26,7 @@ interface CategoryNode extends Category {
 @Component({
   selector: 'app-categories-list-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     IconComponent,
@@ -36,7 +38,12 @@ interface CategoryNode extends Category {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Categorías" subtitle="Clasificación de productos en dos niveles.">
-      <button type="button" class="btn btn-primary magnetic" (click)="openCreate()">
+      <button
+        *appCan="'categories.manage'"
+        type="button"
+        class="btn btn-primary magnetic"
+        (click)="openCreate()"
+      >
         <ui-icon name="plus" [size]="4" /> Nueva categoría
       </button>
     </ui-page-header>
@@ -56,7 +63,12 @@ interface CategoryNode extends Category {
           title="Sin categorías"
           description="Crea categorías para clasificar tus productos y filtrarlos con facilidad."
         >
-          <button type="button" class="btn btn-primary" (click)="openCreate()">
+          <button
+            *appCan="'categories.manage'"
+            type="button"
+            class="btn btn-primary"
+            (click)="openCreate()"
+          >
             Nueva categoría
           </button>
         </ui-empty-state>
@@ -86,6 +98,7 @@ interface CategoryNode extends Category {
                   <td>
                     <div class="flex justify-end gap-1">
                       <button
+                        *appCan="'categories.manage'"
                         type="button"
                         class="btn btn-ghost btn-icon btn-sm"
                         [attr.aria-label]="'Editar ' + node.name"
@@ -94,6 +107,7 @@ interface CategoryNode extends Category {
                         <ui-icon name="edit" [size]="4" />
                       </button>
                       <button
+                        *appCan="'categories.manage'"
                         type="button"
                         class="btn btn-ghost btn-icon btn-sm text-rose-600"
                         [attr.aria-label]="'Eliminar ' + node.name"
@@ -122,6 +136,7 @@ interface CategoryNode extends Category {
                     <td>
                       <div class="flex justify-end gap-1">
                         <button
+                          *appCan="'categories.manage'"
                           type="button"
                           class="btn btn-ghost btn-icon btn-sm"
                           [attr.aria-label]="'Editar ' + child.name"
@@ -130,6 +145,7 @@ interface CategoryNode extends Category {
                           <ui-icon name="edit" [size]="4" />
                         </button>
                         <button
+                          *appCan="'categories.manage'"
                           type="button"
                           class="btn btn-ghost btn-icon btn-sm text-rose-600"
                           [attr.aria-label]="'Eliminar ' + child.name"

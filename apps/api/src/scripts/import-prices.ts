@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { formatInternalCode } from '../modules/products/domain/product.js';
 import { DEFAULT_PRICING } from '../modules/settings/domain/pricing.js';
 import type { Database } from '../shared/infrastructure/database/database.service.js';
@@ -45,34 +45,38 @@ function parseOptions(argv: string[]): Options {
   };
 }
 
-async function readIgvRate(db: Database): Promise<number> {
+async function readIgvRate(db: Database, companyId: number): Promise<number> {
   const [row] = await db
     .select()
     .from(settings)
-    .where(eq(settings.key, 'pricing.igvRate'))
+    .where(and(eq(settings.key, 'pricing.igvRate'), eq(settings.companyId, companyId)))
     .limit(1);
   return row ? Number(row.value) : DEFAULT_PRICING.igvRate;
 }
 
 async function applyPlan(
   db: Database,
+  companyId: number,
   plan: PricePlan,
   options: Options,
   exchangeRate: number,
 ): Promise<void> {
-  const equipmentIds = await ensureEquipment(db);
-  const categoryIds = await ensureTaxonomy(db);
+  const equipmentIds = await ensureEquipment(db, companyId);
+  const categoryIds = await ensureTaxonomy(db, companyId);
   const costCenterIds = new Map(
-    (await db.select({ id: costCenters.id, name: costCenters.name }).from(costCenters)).map(
-      (row) => [row.name, row.id],
-    ),
+    (
+      await db
+        .select({ id: costCenters.id, name: costCenters.name })
+        .from(costCenters)
+        .where(eq(costCenters.companyId, companyId))
+    ).map((row) => [row.name, row.id]),
   );
 
   const costCenterId = async (name: string | null): Promise<number | null> => {
     if (!name) return null;
     const known = costCenterIds.get(name);
     if (known) return known;
-    const [result] = await db.insert(costCenters).values({ name });
+    const [result] = await db.insert(costCenters).values({ companyId, name });
     costCenterIds.set(name, result.insertId);
     return result.insertId;
   };
@@ -91,7 +95,10 @@ async function applyPlan(
     if (update.specification) changes.specification = update.specification;
     const centerId = await costCenterId(update.costCenter);
     if (centerId) changes.costCenterId = centerId;
-    await db.update(products).set(changes).where(eq(products.id, update.productId));
+    await db
+      .update(products)
+      .set(changes)
+      .where(and(eq(products.id, update.productId), eq(products.companyId, companyId)));
 
     for (const name of update.equipmentNames) {
       const equipmentId = equipmentIds.get(name);
@@ -105,13 +112,14 @@ async function applyPlan(
 
   if (!options.createMissing) return;
 
-  const existingCodes = (await db.select({ code: products.code }).from(products)).map(
-    (r) => r.code,
-  );
+  const existingCodes = (
+    await db.select({ code: products.code }).from(products).where(eq(products.companyId, companyId))
+  ).map((r) => r.code);
   let internalSequence = existingCodes.filter((code) => code.startsWith('INT-')).length;
 
   const create = async ({ row, code, name, categorySlug }: MissingProduct): Promise<void> => {
     await db.insert(products).values({
+      companyId,
       code: code ?? formatInternalCode(++internalSequence),
       isInternalCode: code === null,
       name,
@@ -156,10 +164,12 @@ const sheet = await readPriceSheet(options.file);
 const context = openScriptContext();
 
 try {
-  const igvRate = await readIgvRate(context.db);
+  console.log(`Importing prices into company: ${context.company.id}`);
+  const igvRate = await readIgvRate(context.db, context.company.id);
   const inventory = await context.db
     .select({ id: products.id, code: products.code, name: products.name })
-    .from(products);
+    .from(products)
+    .where(eq(products.companyId, context.company.id));
   const exchangeRate = sheet.exchangeRate ?? LEGACY_EXCHANGE_RATE;
   const plan = planPrices(sheet.rows, inventory, { igvRate, exchangeRate });
   report(plan, exchangeRate, sheet.exchangeRate !== null);
@@ -168,7 +178,7 @@ try {
     console.log('Dry run: nothing was written');
   } else {
     await context.db.transaction((tx) =>
-      applyPlan(tx as unknown as Database, plan, options, exchangeRate),
+      applyPlan(tx as unknown as Database, context.company.id, plan, options, exchangeRate),
     );
     console.log('Price import completed');
   }

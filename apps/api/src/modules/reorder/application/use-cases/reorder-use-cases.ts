@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { MoneyVisibility } from '../../../../shared/application/money-visibility.js';
 import { SpreadsheetWriter } from '../../../../shared/application/spreadsheet-writer.js';
 import { ProductRepository } from '../../../products/application/ports/product.repository.js';
 import type { ProductListItem } from '../../../products/domain/product.js';
@@ -70,9 +71,9 @@ export class ExportReorderSuggestions {
     private readonly spreadsheet: SpreadsheetWriter,
   ) {}
 
-  async execute(filters: ReorderFilters): Promise<Buffer> {
+  async execute(filters: ReorderFilters, visibility: MoneyVisibility): Promise<Buffer> {
     const { items } = await this.suggestions.execute(filters);
-    return this.spreadsheet.write({
+    const spec = {
       name: 'Reposición',
       columns: [
         { header: 'Código', key: 'code', width: 20 },
@@ -98,6 +99,11 @@ export class ExportReorderSuggestions {
         cost: product.costPen,
         estimated: estimatedCostPen,
       })),
+    };
+    const hidden = new Set(visibility.costs ? [] : ['cost', 'estimated']);
+    return this.spreadsheet.write({
+      ...spec,
+      columns: spec.columns.filter((column) => !hidden.has(column.key)),
     });
   }
 }

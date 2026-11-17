@@ -13,12 +13,14 @@ import { BadgeComponent, StockBadgeComponent } from '../../shared/ui/badge.compo
 import { IconComponent } from '../../shared/ui/icon.component';
 import { PageHeaderComponent, StatCardComponent } from '../../shared/ui/layout.components';
 import { ErrorStateComponent } from '../../shared/ui/states.components';
+import { CanDirective } from '../../core/config/can.directive';
 
 const TREND_DAYS = 30;
 
 @Component({
   selector: 'app-dashboard-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -62,6 +64,7 @@ const TREND_DAYS = 30;
           "
         />
         <ui-stat-card
+          *appCan="'products.costs.view'"
           label="Valor del inventario"
           [value]="d.totals.inventoryValuePen | pen"
           [hint]="
@@ -71,6 +74,7 @@ const TREND_DAYS = 30;
           "
         />
         <ui-stat-card
+          *appCan="'products.prices.view'"
           label="Valor a precio de venta"
           [value]="d.totals.inventoryValueAtPricePen | pen"
           hint="En soles, sin IGV"
@@ -131,6 +135,7 @@ const TREND_DAYS = 30;
           </span>
         </a>
         <a
+          *appCan="'products.prices.view'"
           routerLink="/products"
           [queryParams]="{ hasPrice: false }"
           class="card card-lift flex items-center gap-4 p-4"

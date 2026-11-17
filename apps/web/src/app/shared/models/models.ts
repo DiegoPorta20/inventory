@@ -8,7 +8,7 @@ export interface Page<T> {
 export type UnitOfMeasure = 'UNIT' | 'PCS' | 'SET';
 export type StockStatus = 'OUT' | 'LOW' | 'OK';
 export type StockStatusFilter = StockStatus | 'UNCONFIGURED';
-export type Role = 'ADMIN';
+export type Role = 'ADMIN' | 'PERSONAL';
 
 export interface User {
   id: number;
