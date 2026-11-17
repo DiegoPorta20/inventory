@@ -25,10 +25,12 @@ import { DialogFrameComponent } from '../../shared/ui/dialog-frame.component';
 import { FieldComponent } from '../../shared/ui/layout.components';
 import { ProductPickerComponent } from '../../shared/ui/product-picker.component';
 import { ToastService } from '../../shared/ui/toast.service';
+import { CanDirective } from '../../core/config/can.directive';
+import { ClientConfigService } from '../../core/config/client-config.service';
 
 export interface RegisterMovementData {
   product?: Pick<ProductListItem, 'id' | 'code' | 'name' | 'stock' | 'unit'> &
-    Partial<Pick<ProductListItem, 'priceUsd'>>;
+    Partial<Pick<ProductListItem, 'pricePen'>>;
   type?: MovementType;
 }
 
@@ -46,6 +48,7 @@ export function openRegisterMovement(dialog: Dialog, data: RegisterMovementData 
 @Component({
   selector: 'app-register-movement-dialog',
   imports: [
+    CanDirective,
     ReactiveFormsModule,
     DialogFrameComponent,
     FieldComponent,
@@ -162,14 +165,18 @@ export function openRegisterMovement(dialog: Dialog, data: RegisterMovementData 
                 formControlName="counterparty"
                 maxlength="160"
             /></ui-field>
-            <ui-field label="Precio unitario (USD)" for="movement-price" [hint]="priceHint()"
+            <ui-field
+              *appCan="'products.prices.view'"
+              label="Precio unitario (S/ sin IGV)"
+              for="movement-price"
+              [hint]="priceHint()"
               ><input
                 id="movement-price"
                 class="input"
                 type="number"
                 min="0"
                 step="0.01"
-                formControlName="unitPriceUsd"
+                formControlName="unitPricePen"
             /></ui-field>
           </div>
         } @else if (type() !== 'ADJUSTMENT') {
@@ -218,6 +225,7 @@ export class RegisterMovementDialog {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
   private readonly pricing = inject(PricingService);
+  private readonly config = inject(ClientConfigService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   protected readonly types = TYPES;
@@ -236,7 +244,7 @@ export class RegisterMovementDialog {
     reason: [MANUAL_REASONS[this.data.type ?? 'OUT'][0] as string, Validators.required],
     quantity: [null as number | null, [Validators.required]],
     counterparty: [''],
-    unitPriceUsd: [null as number | null],
+    unitPricePen: [null as number | null],
     note: [''],
   });
 
@@ -253,8 +261,8 @@ export class RegisterMovementDialog {
     { requireSync: true },
   );
   private readonly unitPrice = toSignal(
-    this.form.controls.unitPriceUsd.valueChanges.pipe(
-      startWith(this.form.controls.unitPriceUsd.value),
+    this.form.controls.unitPricePen.valueChanges.pipe(
+      startWith(this.form.controls.unitPricePen.value),
     ),
     { requireSync: true },
   );
@@ -295,8 +303,8 @@ export class RegisterMovementDialog {
     });
 
     effect(() => {
-      const control = this.form.controls.unitPriceUsd;
-      const price = this.product()?.priceUsd ?? null;
+      const control = this.form.controls.unitPricePen;
+      const price = this.product()?.pricePen ?? null;
       const isSale = this.type() === 'OUT' && this.reason() === 'SALE';
       if (isSale && price != null && !control.dirty && control.value == null) {
         control.setValue(price);
@@ -324,7 +332,7 @@ export class RegisterMovementDialog {
         reason: value.reason,
         quantity: Number(value.quantity),
         counterparty: value.counterparty.trim() || null,
-        unitPriceUsd: value.unitPriceUsd ?? null,
+        unitPricePen: this.config.canSeePrices() ? (value.unitPricePen ?? null) : null,
         note: value.note.trim() || null,
       })
       .pipe(map(() => true))

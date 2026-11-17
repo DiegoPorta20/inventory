@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { count, eq, like, or } from 'drizzle-orm';
+import { and, count, eq, like, or } from 'drizzle-orm';
 import { ConflictError, NotFoundError } from '../../../shared/domain/errors.js';
 import { DatabaseService } from '../../../shared/infrastructure/database/database.service.js';
 import { isDuplicateEntry } from '../../../shared/infrastructure/database/mysql-errors.js';
@@ -7,6 +7,7 @@ import {
   equipmentModels,
   productEquipment,
 } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import { EquipmentModelRepository } from '../application/ports/equipment-model.repository.js';
 import type {
   EquipmentModel,
@@ -23,8 +24,15 @@ const columns = {
 
 @Injectable()
 export class DrizzleEquipmentModelRepository extends EquipmentModelRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
+  }
+
+  private get inCompany() {
+    return eq(equipmentModels.companyId, this.tenant.companyId);
   }
 
   async findAllWithCounts(search?: string): Promise<EquipmentModelWithCount[]> {
@@ -34,7 +42,12 @@ export class DrizzleEquipmentModelRepository extends EquipmentModelRepository {
       .from(equipmentModels)
       .leftJoin(productEquipment, eq(productEquipment.equipmentId, equipmentModels.id))
       .where(
-        term ? or(like(equipmentModels.name, term), like(equipmentModels.brand, term)) : undefined,
+        and(
+          this.inCompany,
+          term
+            ? or(like(equipmentModels.name, term), like(equipmentModels.brand, term))
+            : undefined,
+        ),
       )
       .groupBy(equipmentModels.id)
       .orderBy(equipmentModels.name);
@@ -45,14 +58,16 @@ export class DrizzleEquipmentModelRepository extends EquipmentModelRepository {
     const [row] = await this.database.db
       .select(columns)
       .from(equipmentModels)
-      .where(eq(equipmentModels.id, id))
+      .where(and(eq(equipmentModels.id, id), this.inCompany))
       .limit(1);
     return row ?? null;
   }
 
   async create(model: EquipmentModelDraft): Promise<EquipmentModel> {
     try {
-      const [result] = await this.database.db.insert(equipmentModels).values(model);
+      const [result] = await this.database.db
+        .insert(equipmentModels)
+        .values({ ...model, companyId: this.tenant.companyId });
       return this.requireById(result.insertId);
     } catch (error) {
       if (isDuplicateEntry(error))
@@ -70,7 +85,7 @@ export class DrizzleEquipmentModelRepository extends EquipmentModelRepository {
         await this.database.db
           .update(equipmentModels)
           .set(values)
-          .where(eq(equipmentModels.id, id));
+          .where(and(eq(equipmentModels.id, id), this.inCompany));
       }
     } catch (error) {
       if (isDuplicateEntry(error))
@@ -81,7 +96,9 @@ export class DrizzleEquipmentModelRepository extends EquipmentModelRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await this.database.db.delete(equipmentModels).where(eq(equipmentModels.id, id));
+    await this.database.db
+      .delete(equipmentModels)
+      .where(and(eq(equipmentModels.id, id), this.inCompany));
   }
 
   private async requireById(id: number): Promise<EquipmentModel> {

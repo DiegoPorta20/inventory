@@ -22,7 +22,7 @@ import { IconComponent } from './icon.component';
         <ui-icon name="search" [size]="4" />
       </span>
       <input
-        class="input pr-8 pl-9"
+        class="input input-pill pr-8 pl-9"
         type="search"
         [placeholder]="placeholder()"
         [attr.aria-label]="label()"

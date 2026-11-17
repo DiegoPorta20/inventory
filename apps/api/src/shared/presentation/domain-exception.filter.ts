@@ -14,6 +14,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   VALIDATION_ERROR: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
+  SERVICE_UNAVAILABLE: 503,
 };
 
 @Catch()

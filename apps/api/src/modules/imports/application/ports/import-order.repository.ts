@@ -22,7 +22,6 @@ export interface ImportOrderDraft {
   orderedAt: string | null;
   expectedAt: string | null;
   receivedAt: string | null;
-  exchangeRate: number | null;
   notes: string | null;
   createdBy: number | null;
 }
@@ -30,7 +29,7 @@ export interface ImportOrderDraft {
 export interface ImportItemDraft {
   productId: number;
   quantityOrdered: number;
-  unitCostUsd: number | null;
+  unitCostPen: number | null;
   notes: string | null;
 }
 

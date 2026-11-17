@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const loginSchema = z.strictObject({
+  company: z.string().trim().min(1).max(60),
   email: z.string().trim().email().max(190),
   password: z.string().min(1).max(128),
 });

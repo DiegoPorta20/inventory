@@ -6,7 +6,7 @@ El análisis del Excel de inventario que originó el diseño está en [`docs/dom
 
 ## Módulos
 
-Panel · Productos (filtros, detalle, precios con IGV y soles, precio por mayor, edición en lote, exportación Excel y lista de precios) · Categorías · Centros de costo · Movimientos (libro de stock) · Conteos físicos · Reposición (qué pedir y cuánto) · Importaciones (pedido → tránsito → recepción) · Proveedores · Equipos compatibles · Usuarios · Configuración (tipo de cambio e IGV).
+Panel · Productos (filtros, detalle, precios con IGV y soles, precio por mayor, edición en lote, exportación Excel y lista de precios) · Categorías · Centros de costo · Movimientos (libro de stock) · Conteos físicos · Reposición (qué pedir y cuánto) · Importaciones (pedido → tránsito → recepción) · Proveedores · Equipos compatibles · Usuarios · Configuración (IGV).
 
 ## Requisitos
 
@@ -22,17 +22,18 @@ pnpm db:migrate               # crea las tablas
 pnpm db:seed                  # admin inicial + categorías + equipos
 pnpm db:import-excel          # opcional: carga data/inventory.xlsx
 pnpm db:import-prices         # opcional: aplica data/Precios*.xlsx (precios, centros de costo, consignación)
+pnpm db:seed-sample           # solo desarrollo, sin Excel: 52 productos de ejemplo (usar en lugar de db:import-excel)
 pnpm db:seed-demo             # solo desarrollo: datos aleatorios para que todas las pantallas tengan información
 pnpm dev                      # API http://localhost:3000 + web http://localhost:4200
 ```
 
 `db:seed-demo` completa precios, costos, stock mínimo, ubicaciones y centros de costo faltantes, y crea proveedores, 4 importaciones (pedido, en tránsito, borrador, recibida), ventas recientes y un conteo físico. Es determinista y se niega a correr en producción o si ya hay datos demo; para repetirlo: `pnpm db:import-excel --reset && pnpm db:import-prices && pnpm db:seed-demo`.
 
-Usuario inicial: el definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (`.env`). Cámbiala desde *Mi cuenta*.
+Usuario inicial: el definido en `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (`.env`). Cámbiala desde _Mi cuenta_.
 
 `pnpm db:import-excel [archivo] [--reset] [--dry-run] [--min-stock=N] [--snapshot=YYYY-MM-DD]` clasifica productos, consolida códigos repetidos y crea importaciones y movimientos. `pnpm db:import-prices [archivo] [--dry-run] [--create-missing]` actualiza precios y datos comerciales de los productos existentes. Los Excel están en `.gitignore`: nunca se versionan.
 
-**Precios**: el precio base es USD sin IGV; el IGV (18 %) y el tipo de cambio (3.6) se configuran en *Configuración* y de ahí salen el precio en USD con IGV y en soles.
+**Precios**: todo está en soles (S/). El precio base se guarda sin IGV; el IGV (18 %) se configura en _Configuración_ y de ahí sale el precio con IGV. En pantalla y en los Excel siempre se rotula "sin IGV" o "con IGV".
 
 ## Producción (monolito)
 

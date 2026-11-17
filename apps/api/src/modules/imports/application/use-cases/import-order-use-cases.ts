@@ -28,7 +28,6 @@ export interface ImportOrderInput {
   reference?: string | null;
   orderedAt?: string | null;
   expectedAt?: string | null;
-  exchangeRate?: number | null;
   notes?: string | null;
   items: ImportItemDraft[];
 }
@@ -103,7 +102,6 @@ export class CreateImportOrder {
         orderedAt: input.orderedAt ?? (input.status === 'ORDERED' ? todayInBusinessZone() : null),
         expectedAt: input.expectedAt ?? null,
         receivedAt: null,
-        exchangeRate: input.exchangeRate ?? null,
         notes: input.notes ?? null,
         createdBy: userId,
       },
@@ -195,8 +193,8 @@ export class ReceiveImportOrder {
           note: `Import #${order.number}`,
           userId,
         });
-        if (item.unitCostUsd != null) {
-          await this.products.update(item.productId, { costUsd: item.unitCostUsd });
+        if (item.unitCostPen != null) {
+          await this.products.update(item.productId, { costPen: item.unitCostPen });
         }
       }
       return (await this.imports.findById(id)) as ImportOrderDetail;

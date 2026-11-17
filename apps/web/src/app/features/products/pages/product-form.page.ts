@@ -22,18 +22,21 @@ import type {
   ProductDetail,
   UnitOfMeasure,
 } from '../../../shared/models/models';
-import { FORMAT_PIPES } from '../../../shared/pipes/format.pipes';
+import { FORMAT_PIPES, formatPen } from '../../../shared/pipes/format.pipes';
 import { FieldComponent, PageHeaderComponent } from '../../../shared/ui/layout.components';
 import { ErrorStateComponent } from '../../../shared/ui/states.components';
 import { ToastService } from '../../../shared/ui/toast.service';
 import { buildCategoryOptions } from '../category-options';
 import { ProductsApi, type ProductInput } from '../products.api';
+import { CanDirective } from '../../../core/config/can.directive';
+import { ClientConfigService } from '../../../core/config/client-config.service';
 
 const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
 
 @Component({
   selector: 'app-product-form-page',
   imports: [
+    CanDirective,
     ReactiveFormsModule,
     RouterLink,
     FORMAT_PIPES,
@@ -168,122 +171,130 @@ const UNITS: UnitOfMeasure[] = ['UNIT', 'PCS', 'SET'];
                 formControlName="reorderQuantity"
               />
             </ui-field>
-            <ui-field label="Costo (USD)" for="costUsd" [error]="errors()['costUsd']">
-              <input
-                id="costUsd"
-                class="input"
-                type="number"
-                min="0"
-                step="0.0001"
-                formControlName="costUsd"
-              />
-            </ui-field>
-            <div></div>
             <ui-field
-              label="Precio de venta (USD sin IGV)"
-              for="priceUsd"
-              [error]="errors()['priceUsd']"
+              *appCan="'products.costs.view'"
+              label="Costo (S/)"
+              for="costPen"
+              [error]="errors()['costPen']"
             >
               <input
-                id="priceUsd"
+                id="costPen"
                 class="input"
                 type="number"
                 min="0"
                 step="0.0001"
-                formControlName="priceUsd"
-                (input)="onPriceUsdInput($any($event.target).value)"
+                formControlName="costPen"
               />
             </ui-field>
-            <ui-field label="Precio de venta (S/ con IGV)" for="pricePen" [hint]="exchangeHint()">
-              <input
-                id="pricePen"
-                class="input"
-                type="number"
-                min="0"
-                step="0.01"
-                [value]="pricePen()"
-                (input)="onPricePenInput($any($event.target).value)"
-              />
-            </ui-field>
-          </div>
-
-          <dl
-            class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4"
-            aria-live="polite"
-          >
-            <div>
-              <dt class="text-xs text-slate-500">IGV</dt>
-              <dd class="font-medium tabular-nums">{{ retailBreakdown()?.igvUsd | usd }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">USD con IGV</dt>
-              <dd class="font-medium tabular-nums">
-                {{ retailBreakdown()?.priceWithIgvUsd | usd }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">S/ con IGV</dt>
-              <dd class="font-medium tabular-nums">
-                {{ retailBreakdown()?.priceWithIgvPen | pen }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Margen estimado</dt>
-              <dd
-                class="font-medium tabular-nums"
-                [class]="
-                  marginPercent() === null
-                    ? 'text-slate-400'
-                    : marginPercent()! >= 0
-                      ? 'text-emerald-700'
-                      : 'text-rose-600'
-                "
+            <ng-container *appCan="'products.prices.view'">
+              <div></div>
+              <ui-field
+                label="Precio de venta (S/ sin IGV)"
+                for="pricePen"
+                [error]="errors()['pricePen']"
               >
-                @if (marginPercent() !== null) {
-                  {{ marginPercent()! >= 0 ? '+' : '' }}{{ marginPercent() }}%
-                } @else {
-                  —
-                }
-              </dd>
-            </div>
-          </dl>
-
-          <div class="mt-4 grid gap-4 md:grid-cols-2">
-            <ui-field
-              label="Precio por mayor (S/ con IGV)"
-              for="wholesalePen"
-              [error]="errors()['wholesalePriceUsd']"
-            >
-              <input
-                id="wholesalePen"
-                class="input"
-                type="number"
-                min="0"
-                step="0.01"
-                [value]="wholesalePen()"
-                (input)="onWholesalePenInput($any($event.target).value)"
-              />
-            </ui-field>
-            <ui-field
-              label="Cantidad mínima por mayor"
-              for="wholesaleMinQty"
-              [error]="errors()['wholesaleMinQty']"
-            >
-              <input
-                id="wholesaleMinQty"
-                class="input"
-                type="number"
-                min="1"
-                step="1"
-                formControlName="wholesaleMinQty"
-              />
-            </ui-field>
+                <input
+                  id="pricePen"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  formControlName="pricePen"
+                  (input)="onPriceInput($any($event.target).value)"
+                />
+              </ui-field>
+              <ui-field label="Precio de venta (S/ con IGV)" for="priceWithIgv" [hint]="igvHint()">
+                <input
+                  id="priceWithIgv"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="priceWithIgv()"
+                  (input)="onPriceWithIgvInput($any($event.target).value)"
+                />
+              </ui-field>
+            </ng-container>
           </div>
-          @if (wholesaleMinQtyMissing()) {
-            <p class="mt-2 text-sm text-rose-600" role="alert">
-              Indica la cantidad mínima para el precio por mayor.
-            </p>
-          }
+
+          <ng-container *appCan="'products.prices.view'">
+            <dl
+              class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4"
+              aria-live="polite"
+            >
+              <div>
+                <dt class="text-xs text-slate-500">Precio sin IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retailBreakdown()?.pricePen | pen }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">IGV</dt>
+                <dd class="font-medium tabular-nums">{{ retailBreakdown()?.igvPen | pen }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">Precio con IGV</dt>
+                <dd class="font-medium tabular-nums">
+                  {{ retailBreakdown()?.priceWithIgvPen | pen }}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs text-slate-500">Margen estimado</dt>
+                <dd
+                  class="font-medium tabular-nums"
+                  [class]="
+                    marginPercent() === null
+                      ? 'text-slate-400'
+                      : marginPercent()! >= 0
+                        ? 'text-emerald-700'
+                        : 'text-rose-600'
+                  "
+                >
+                  @if (marginPercent() !== null) {
+                    {{ marginPercent()! >= 0 ? '+' : '' }}{{ marginPercent() }}%
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+            </dl>
+
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+              <ui-field
+                label="Precio por mayor (S/ con IGV)"
+                for="wholesaleWithIgv"
+                [hint]="wholesaleHint()"
+                [error]="errors()['wholesalePricePen']"
+              >
+                <input
+                  id="wholesaleWithIgv"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [value]="wholesaleWithIgv()"
+                  (input)="onWholesaleWithIgvInput($any($event.target).value)"
+                />
+              </ui-field>
+              <ui-field
+                label="Cantidad mínima por mayor"
+                for="wholesaleMinQty"
+                [error]="errors()['wholesaleMinQty']"
+              >
+                <input
+                  id="wholesaleMinQty"
+                  class="input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  formControlName="wholesaleMinQty"
+                />
+              </ui-field>
+            </div>
+            @if (wholesaleMinQtyMissing()) {
+              <p class="mt-2 text-sm text-rose-600" role="alert">
+                Indica la cantidad mínima para el precio por mayor.
+              </p>
+            }
+          </ng-container>
         </section>
 
         <section class="card p-4">
@@ -359,9 +370,13 @@ export class ProductFormPage {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly pricing = inject(PricingService);
+  private readonly config = inject(ClientConfigService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
-  readonly id = input(undefined, { transform: numberAttribute });
+  // The router passes `undefined` on /products/new; numberAttribute would turn that into NaN.
+  readonly id = input<number | undefined, unknown>(undefined, {
+    transform: (value) => (value === undefined ? undefined : numberAttribute(value)),
+  });
 
   protected readonly units = UNITS;
   protected readonly unitLabels = UNIT_LABELS;
@@ -373,9 +388,9 @@ export class ProductFormPage {
   protected readonly loadError = signal(false);
   protected readonly selectedEquipment = signal<Set<number>>(new Set());
 
-  /** Display values for the sol-with-IGV inputs; USD without IGV is the stored source of truth. */
-  protected readonly pricePen = signal<number | null>(null);
-  protected readonly wholesalePen = signal<number | null>(null);
+  /** Display values for the "con IGV" inputs; the price without IGV is the stored source of truth. */
+  protected readonly priceWithIgv = signal<number | null>(null);
+  protected readonly wholesaleWithIgv = signal<number | null>(null);
 
   private readonly references = rxResource<
     {
@@ -417,9 +432,9 @@ export class ProductFormPage {
     minStock: [0, [Validators.min(0)]],
     reorderQuantity: [0, [Validators.min(0)]],
     location: [''],
-    costUsd: [null as number | null, [Validators.min(0)]],
-    priceUsd: [null as number | null, [Validators.min(0)]],
-    wholesalePriceUsd: [null as number | null, [Validators.min(0)]],
+    costPen: [null as number | null, [Validators.min(0)]],
+    pricePen: [null as number | null, [Validators.min(0)]],
+    wholesalePricePen: [null as number | null, [Validators.min(0)]],
     wholesaleMinQty: [null as number | null, [Validators.min(1)]],
     notes: [''],
     isActive: [true],
@@ -427,35 +442,39 @@ export class ProductFormPage {
   });
 
   /** Mirror of the money controls so the live summary recomputes on each keystroke. */
-  private readonly priceUsdSignal = signal<number | null>(null);
-  private readonly costUsdSignal = signal<number | null>(null);
-  private readonly wholesaleUsdSignal = signal<number | null>(null);
+  private readonly priceSignal = signal<number | null>(null);
+  private readonly costSignal = signal<number | null>(null);
+  private readonly wholesaleSignal = signal<number | null>(null);
 
-  protected readonly exchangeHint = computed(() => {
-    const { exchangeRate, igvRate } = this.pricing.settings();
-    return `Tipo de cambio ${exchangeRate} · IGV ${Math.round(igvRate * 100)}%`;
+  protected readonly igvHint = computed(
+    () => `Incluye IGV ${Math.round(this.pricing.settings().igvRate * 100)}%`,
+  );
+
+  protected readonly wholesaleHint = computed(() => {
+    const base = this.wholesaleSignal();
+    return base === null ? 'Incluye IGV.' : `Sin IGV: ${formatPen(base)}`;
   });
 
   protected readonly retailBreakdown = computed(() => {
-    const price = this.priceUsdSignal();
+    const price = this.priceSignal();
     return price !== null && price >= 0 ? this.pricing.breakdown(price) : null;
   });
 
   protected readonly marginPercent = computed(() => {
-    const price = this.priceUsdSignal();
-    const cost = this.costUsdSignal();
+    const price = this.priceSignal();
+    const cost = this.costSignal();
     if (price === null || cost === null || cost <= 0) return null;
     return Math.round(((price - cost) / cost) * 1000) / 10;
   });
 
   protected readonly wholesaleMinQtyMissing = computed(
-    () => this.wholesaleUsdSignal() !== null && this.form.controls.wholesaleMinQty.value === null,
+    () => this.wholesaleSignal() !== null && this.form.controls.wholesaleMinQty.value === null,
   );
 
   constructor() {
-    this.form.controls.costUsd.valueChanges
+    this.form.controls.costPen.valueChanges
       .pipe(takeUntilDestroyed())
-      .subscribe((value) => this.costUsdSignal.set(value ?? null));
+      .subscribe((value) => this.costSignal.set(value ?? null));
 
     effect(() => {
       if (this.references.error()) {
@@ -480,26 +499,26 @@ export class ProductFormPage {
       minStock: product.minStock,
       reorderQuantity: product.reorderQuantity,
       location: product.location ?? '',
-      costUsd: product.costUsd,
-      priceUsd: product.priceUsd,
-      wholesalePriceUsd: product.wholesalePriceUsd,
+      costPen: product.costPen,
+      pricePen: product.pricePen,
+      wholesalePricePen: product.wholesalePricePen,
       wholesaleMinQty: product.wholesaleMinQty,
       notes: product.notes ?? '',
       isActive: product.isActive,
       isConsignment: product.isConsignment,
     });
-    this.priceUsdSignal.set(product.priceUsd);
-    this.costUsdSignal.set(product.costUsd);
-    this.wholesaleUsdSignal.set(product.wholesalePriceUsd);
-    this.pricePen.set(product.priceUsd === null ? null : this.toPen(product.priceUsd));
-    this.wholesalePen.set(
-      product.wholesalePriceUsd === null ? null : this.toPen(product.wholesalePriceUsd),
+    this.priceSignal.set(product.pricePen ?? null);
+    this.costSignal.set(product.costPen ?? null);
+    this.wholesaleSignal.set(product.wholesalePricePen ?? null);
+    this.priceWithIgv.set(product.pricePen == null ? null : this.withIgv(product.pricePen));
+    this.wholesaleWithIgv.set(
+      product.wholesalePricePen == null ? null : this.withIgv(product.wholesalePricePen),
     );
     this.selectedEquipment.set(new Set(product.equipment.map((model) => model.id)));
   }
 
-  private toPen(priceUsd: number): number {
-    return this.pricing.breakdown(priceUsd).priceWithIgvPen;
+  private withIgv(pricePen: number): number {
+    return this.pricing.breakdown(pricePen).priceWithIgvPen;
   }
 
   private parseMoney(raw: string): number | null {
@@ -509,28 +528,27 @@ export class ProductFormPage {
     return Number.isFinite(value) && value >= 0 ? value : null;
   }
 
-  protected onPriceUsdInput(raw: string): void {
-    const usd = this.parseMoney(raw);
-    this.priceUsdSignal.set(usd);
-    this.pricePen.set(usd === null ? null : this.toPen(usd));
+  protected onPriceInput(raw: string): void {
+    const base = this.parseMoney(raw);
+    this.priceSignal.set(base);
+    this.priceWithIgv.set(base === null ? null : this.withIgv(base));
   }
 
-  protected onPricePenInput(raw: string): void {
-    const pen = this.parseMoney(raw);
-    this.pricePen.set(pen);
-    const usd = pen === null ? null : this.pricing.usdFromPen(pen);
-    this.priceUsdSignal.set(usd);
-    this.form.controls.priceUsd.setValue(usd);
+  protected onPriceWithIgvInput(raw: string): void {
+    const gross = this.parseMoney(raw);
+    this.priceWithIgv.set(gross);
+    const base = gross === null ? null : this.pricing.priceFromWithIgv(gross);
+    this.priceSignal.set(base);
+    this.form.controls.pricePen.setValue(base);
   }
 
-  protected onWholesalePenInput(raw: string): void {
-    const pen = this.parseMoney(raw);
-    this.wholesalePen.set(pen);
-    const usd = pen === null ? null : this.pricing.usdFromPen(pen);
-    this.wholesaleUsdSignal.set(usd);
-    this.form.controls.wholesalePriceUsd.setValue(usd);
+  protected onWholesaleWithIgvInput(raw: string): void {
+    const gross = this.parseMoney(raw);
+    this.wholesaleWithIgv.set(gross);
+    const base = gross === null ? null : this.pricing.priceFromWithIgv(gross);
+    this.wholesaleSignal.set(base);
+    this.form.controls.wholesalePricePen.setValue(base);
   }
-
 
   protected isEquipmentSelected(id: number): boolean {
     return this.selectedEquipment().has(id);
@@ -550,9 +568,9 @@ export class ProductFormPage {
     if (this.form.invalid || this.pending()) return;
 
     const value = this.form.getRawValue();
-    const wholesalePriceUsd = value.wholesalePriceUsd ?? null;
+    const wholesalePricePen = value.wholesalePricePen ?? null;
     const wholesaleMinQty = value.wholesaleMinQty ?? null;
-    if (wholesalePriceUsd !== null && wholesaleMinQty === null) {
+    if (wholesalePricePen !== null && wholesaleMinQty === null) {
       this.errors.set({ wholesaleMinQty: 'Indica la cantidad mínima para el precio por mayor.' });
       return;
     }
@@ -568,16 +586,18 @@ export class ProductFormPage {
       minStock: Number(value.minStock) || 0,
       reorderQuantity: Number(value.reorderQuantity) || 0,
       location: value.location.trim() || null,
-      costUsd: value.costUsd ?? null,
-      priceUsd: value.priceUsd ?? null,
-      wholesalePriceUsd,
-      wholesaleMinQty: wholesalePriceUsd === null ? null : wholesaleMinQty,
       isConsignment: value.isConsignment,
       notes: value.notes.trim() || null,
       isActive: value.isActive,
       equipmentIds: [...this.selectedEquipment()],
     };
     if (code) payload.code = code;
+    if (this.config.canSeeCosts()) payload.costPen = value.costPen ?? null;
+    if (this.config.canSeePrices()) {
+      payload.pricePen = value.pricePen ?? null;
+      payload.wholesalePricePen = wholesalePricePen;
+      payload.wholesaleMinQty = wholesalePricePen === null ? null : wholesaleMinQty;
+    }
 
     this.pending.set(true);
     this.serverError.set(null);

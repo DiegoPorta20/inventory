@@ -15,6 +15,7 @@ export class BulkUpdateProducts {
       throw new ValidationError('No changes provided');
     }
     await this.references.assertCategory(changes.categoryId);
+    await this.references.assertCostCenter(changes.costCenterId);
     const updated = await this.products.bulkUpdate([...new Set(ids)], changes);
     return { updated };
   }

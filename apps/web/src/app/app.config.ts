@@ -6,10 +6,16 @@ import {
   LOCALE_ID,
   type ApplicationConfig,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import {
+  TitleStrategy,
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { AuthService } from './core/auth/auth.service';
+import { BrandTitleStrategy } from './core/config/brand-title.strategy';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -22,5 +28,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideAppInitializer(() => inject(AuthService).restore()),
     { provide: LOCALE_ID, useValue: 'es-PE' },
+    { provide: TitleStrategy, useExisting: BrandTitleStrategy },
   ],
 };

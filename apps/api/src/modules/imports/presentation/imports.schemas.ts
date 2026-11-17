@@ -10,7 +10,7 @@ import { IMPORT_STATUSES } from '../domain/import-order.js';
 const itemSchema = z.strictObject({
   productId: z.number().int().positive(),
   quantityOrdered: z.number().int().min(1).max(10_000_000),
-  unitCostUsd: z
+  unitCostPen: z
     .number()
     .min(0)
     .max(99_999_999)
@@ -26,7 +26,6 @@ const orderShape = {
   reference: optionalText(120),
   orderedAt: isoDate.nullable().optional(),
   expectedAt: isoDate.nullable().optional(),
-  exchangeRate: z.number().min(0).max(9999).nullable().optional(),
   notes: optionalText(4000),
   items: z.array(itemSchema).min(1).max(1000),
 };

@@ -24,6 +24,10 @@ const envSchema = z.object({
   SEED_ADMIN_EMAIL: z.string().email().default('admin@inventory.local'),
   SEED_ADMIN_PASSWORD: z.string().min(8).default('ChangeMe123!'),
   SEED_ADMIN_NAME: z.string().min(1).default('Administrator'),
+  SEED_COMPANY_ID: z.coerce.number().int().positive().default(1),
+  CONFIG_SERVICE_URL: z.string().url(),
+  CONFIG_SERVICE_KEY: z.string().min(32),
+  INTERNAL_API_KEY: z.string().min(32),
 });
 
 export type Env = z.infer<typeof envSchema>;

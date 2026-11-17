@@ -3,20 +3,20 @@ import {
   DEFAULT_PRICING,
   marginPercent,
   priceBreakdown,
-  priceUsdFromPen,
+  pricePenFromWithIgv,
   productPricing,
 } from './pricing.js';
 
 describe('pricing', () => {
-  it('adds IGV and converts to soles using the exchange rate', () => {
-    const price = priceBreakdown(82.3917, DEFAULT_PRICING);
-    expect(price.igvUsd).toBeCloseTo(14.8305, 3);
-    expect(price.priceWithIgvUsd).toBeCloseTo(97.2222, 3);
+  it('adds IGV to the base price in soles', () => {
+    const price = priceBreakdown(296.6102, DEFAULT_PRICING);
+    expect(price.pricePen).toBe(296.6102);
+    expect(price.igvPen).toBeCloseTo(53.3898, 3);
     expect(price.priceWithIgvPen).toBe(350);
   });
 
-  it('derives the base USD price from a sol price with IGV', () => {
-    expect(priceUsdFromPen(350, DEFAULT_PRICING)).toBeCloseTo(82.3917, 3);
+  it('derives the base price from a sol price with IGV', () => {
+    expect(pricePenFromWithIgv(350, DEFAULT_PRICING)).toBeCloseTo(296.6102, 3);
   });
 
   it('computes margin over the sale price and ignores unknown values', () => {
@@ -28,7 +28,7 @@ describe('pricing', () => {
 
   it('builds retail and wholesale breakdowns', () => {
     const pricing = productPricing(
-      { priceUsd: 82.3917, costUsd: null, wholesalePriceUsd: 70.6214, wholesaleMinQty: 24 },
+      { pricePen: 296.6102, costPen: null, wholesalePricePen: 254.2373, wholesaleMinQty: 24 },
       DEFAULT_PRICING,
     );
     expect(pricing.retail?.priceWithIgvPen).toBe(350);

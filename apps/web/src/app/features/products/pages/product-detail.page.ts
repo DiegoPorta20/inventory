@@ -30,12 +30,16 @@ import { ErrorStateComponent } from '../../../shared/ui/states.components';
 import { ToastService } from '../../../shared/ui/toast.service';
 import { openRegisterMovement } from '../../movements/register-movement.dialog';
 import { ProductsApi } from '../products.api';
+import { ClientConfigService } from '../../../core/config/client-config.service';
+import { CanAnyDirective, CanDirective } from '../../../core/config/can.directive';
 
 type Tab = 'movements' | 'imports';
 
 @Component({
   selector: 'app-product-detail-page',
   imports: [
+    CanAnyDirective,
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -68,16 +72,35 @@ type Tab = 'movements' | 'imports';
       </div>
     } @else if (data(); as p) {
       <ui-page-header [title]="p.name">
-        <a class="btn btn-secondary" [routerLink]="['/products', p.id, 'edit']">
+        <a
+          *appCan="'products.update'"
+          class="btn btn-secondary"
+          [routerLink]="['/products', p.id, 'edit']"
+        >
           <ui-icon name="edit" [size]="4" /> Editar
         </a>
-        <button type="button" class="btn btn-secondary" (click)="registerMovement(p)">
+        <button
+          *appCan="'movements.create'"
+          type="button"
+          class="btn btn-secondary"
+          (click)="registerMovement(p)"
+        >
           <ui-icon name="swap" [size]="4" /> Registrar movimiento
         </button>
-        <button type="button" class="btn btn-secondary" (click)="toggleActive(p)">
+        <button
+          *appCan="'products.update'"
+          type="button"
+          class="btn btn-secondary"
+          (click)="toggleActive(p)"
+        >
           {{ p.isActive ? 'Desactivar' : 'Activar' }}
         </button>
-        <button type="button" class="btn btn-danger" (click)="remove(p)">
+        <button
+          *appCan="'products.delete'"
+          type="button"
+          class="btn btn-danger"
+          (click)="remove(p)"
+        >
           <ui-icon name="trash" [size]="4" /> Eliminar
         </button>
       </ui-page-header>
@@ -130,64 +153,68 @@ type Tab = 'movements' | 'imports';
           </dl>
         </section>
 
-        <section class="card p-4">
-          <h2 class="section-title mb-3">Precios</h2>
-          @if (p.pricing.retail; as retail) {
-            <p class="text-2xl font-semibold tabular-nums text-slate-900">
-              {{ retail.priceWithIgvPen | pen }}
-              <span class="text-sm font-normal text-slate-500">S/ con IGV</span>
-            </p>
-            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-              <div>
-                <dt class="text-xs text-slate-500">USD sin IGV</dt>
-                <dd class="font-medium tabular-nums">{{ retail.priceUsd | usd }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs text-slate-500">IGV</dt>
-                <dd class="font-medium tabular-nums">{{ retail.igvUsd | usd }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs text-slate-500">USD con IGV</dt>
-                <dd class="font-medium tabular-nums">{{ retail.priceWithIgvUsd | usd }}</dd>
-              </div>
-              @if (p.pricing.marginPercent !== null) {
+        <section *appCanAny="['products.prices.view', 'products.costs.view']" class="card p-4">
+          <h2 *appCan="'products.prices.view'" class="section-title mb-3">Precios</h2>
+          <h2 *appCan="'products.prices.view'; not: true" class="section-title mb-3">Costo</h2>
+          <ng-container *appCan="'products.prices.view'">
+            @if (p.pricing.retail; as retail) {
+              <p class="text-2xl font-semibold tabular-nums text-slate-900">
+                {{ retail.priceWithIgvPen | pen }}
+                <span class="text-sm font-normal text-slate-500">con IGV</span>
+              </p>
+              <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div>
-                  <dt class="text-xs text-slate-500">Margen</dt>
-                  <dd
-                    class="font-medium tabular-nums"
-                    [class]="p.pricing.marginPercent >= 0 ? 'text-emerald-700' : 'text-rose-600'"
-                  >
-                    {{ p.pricing.marginPercent >= 0 ? '+' : '' }}{{ p.pricing.marginPercent }}%
-                  </dd>
+                  <dt class="text-xs text-slate-500">Precio sin IGV</dt>
+                  <dd class="font-medium tabular-nums">{{ retail.pricePen | pen }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-slate-500">IGV</dt>
+                  <dd class="font-medium tabular-nums">{{ retail.igvPen | pen }}</dd>
+                </div>
+                @if (p.pricing.marginPercent != null) {
+                  <div>
+                    <dt class="text-xs text-slate-500">Margen</dt>
+                    <dd
+                      class="font-medium tabular-nums"
+                      [class]="p.pricing.marginPercent >= 0 ? 'text-emerald-700' : 'text-rose-600'"
+                    >
+                      {{ p.pricing.marginPercent >= 0 ? '+' : '' }}{{ p.pricing.marginPercent }}%
+                    </dd>
+                  </div>
+                }
+              </dl>
+              @if (p.pricing.wholesale; as wholesale) {
+                <div class="mt-3 border-t border-slate-100 pt-3">
+                  <p class="text-xs text-slate-500">
+                    Por mayor
+                    @if (wholesale.minQty) {
+                      (desde {{ wholesale.minQty | quantity }} unidades)
+                    }
+                  </p>
+                  <p class="mt-0.5 text-lg font-semibold tabular-nums text-slate-900">
+                    {{ wholesale.priceWithIgvPen | pen }}
+                    <span class="text-xs font-normal text-slate-500">con IGV</span>
+                    <span class="ml-2 text-xs font-normal text-slate-400"
+                      >{{ wholesale.pricePen | pen }} sin IGV</span
+                    >
+                  </p>
                 </div>
               }
-            </dl>
-            @if (p.pricing.wholesale; as wholesale) {
-              <div class="mt-3 border-t border-slate-100 pt-3">
-                <p class="text-xs text-slate-500">
-                  Por mayor
-                  @if (wholesale.minQty) {
-                    (desde {{ wholesale.minQty | quantity }} unidades)
-                  }
-                </p>
-                <p class="mt-0.5 text-lg font-semibold tabular-nums text-slate-900">
-                  {{ wholesale.priceWithIgvPen | pen }}
-                  <span class="text-xs font-normal text-slate-400">{{
-                    wholesale.priceUsd | usd
-                  }}</span>
-                </p>
-              </div>
+            } @else {
+              <p class="text-sm text-slate-500">Sin precio registrado.</p>
+              <a
+                *appCan="'products.update'"
+                class="btn btn-secondary btn-sm mt-3"
+                [routerLink]="['/products', p.id, 'edit']"
+              >
+                Registrar precio
+              </a>
             }
-          } @else {
-            <p class="text-sm text-slate-500">Sin precio registrado.</p>
-            <a class="btn btn-secondary btn-sm mt-3" [routerLink]="['/products', p.id, 'edit']">
-              Registrar precio
-            </a>
-          }
-          <dl class="mt-3 border-t border-slate-100 pt-3">
+          </ng-container>
+          <dl *appCan="'products.costs.view'" class="mt-3 border-t border-slate-100 pt-3">
             <div class="flex justify-between gap-3 text-sm">
-              <dt class="text-slate-500">Costo</dt>
-              <dd class="font-medium tabular-nums">{{ p.costUsd | usd: true }}</dd>
+              <dt class="text-slate-500">Costo (sin IGV)</dt>
+              <dd class="font-medium tabular-nums">{{ p.costPen | pen: true }}</dd>
             </div>
           </dl>
         </section>
@@ -262,6 +289,7 @@ type Tab = 'movements' | 'imports';
             Movimientos
           </button>
           <button
+            *appCan="'imports.view'"
             type="button"
             role="tab"
             class="border-b-2 px-3 py-3 text-sm font-medium"
@@ -378,6 +406,7 @@ export class ProductDetailPage {
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+  protected readonly config = inject(ClientConfigService);
 
   readonly id = input.required({ transform: numberAttribute });
 
@@ -401,7 +430,7 @@ export class ProductDetailPage {
   });
 
   protected readonly imports = rxResource({
-    params: () => this.id(),
+    params: () => (this.config.can('imports.view') ? this.id() : undefined),
     stream: ({ params }) => this.api.listProductImports(params),
   });
 

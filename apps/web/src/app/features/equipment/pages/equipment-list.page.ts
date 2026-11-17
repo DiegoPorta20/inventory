@@ -18,10 +18,12 @@ import { ToastService } from '../../../shared/ui/toast.service';
 import { useQueryFilters } from '../../../shared/util/query-filters';
 import { openEquipmentDialog } from '../components/equipment.dialog';
 import { EquipmentApi } from '../equipment.api';
+import { CanDirective } from '../../../core/config/can.directive';
 
 @Component({
   selector: 'app-equipment-list-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     IconComponent,
@@ -34,7 +36,12 @@ import { EquipmentApi } from '../equipment.api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Equipos" subtitle="Máquinas a las que pertenecen los repuestos.">
-      <button type="button" class="btn btn-primary" (click)="openCreate()">
+      <button
+        *appCan="'equipment.manage'"
+        type="button"
+        class="btn btn-primary magnetic"
+        (click)="openCreate()"
+      >
         <ui-icon name="plus" [size]="4" /> Nuevo equipo
       </button>
     </ui-page-header>
@@ -64,7 +71,12 @@ import { EquipmentApi } from '../equipment.api';
           title="No hay equipos"
           description="Registra los equipos para clasificar los repuestos por máquina."
         >
-          <button type="button" class="btn btn-primary" (click)="openCreate()">
+          <button
+            *appCan="'equipment.manage'"
+            type="button"
+            class="btn btn-primary"
+            (click)="openCreate()"
+          >
             <ui-icon name="plus" [size]="4" /> Nuevo equipo
           </button>
         </ui-empty-state>
@@ -105,6 +117,7 @@ import { EquipmentApi } from '../equipment.api';
                         <ui-icon name="box" [size]="4" /> Productos
                       </a>
                       <button
+                        *appCan="'equipment.manage'"
                         type="button"
                         class="btn btn-ghost btn-icon"
                         aria-label="Editar"
@@ -113,6 +126,7 @@ import { EquipmentApi } from '../equipment.api';
                         <ui-icon name="edit" [size]="4" />
                       </button>
                       <button
+                        *appCan="'equipment.manage'"
                         type="button"
                         class="btn btn-ghost btn-icon text-rose-600"
                         aria-label="Eliminar"

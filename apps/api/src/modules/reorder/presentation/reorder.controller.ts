@@ -7,6 +7,9 @@ import {
   ExportReorderSuggestions,
   GetReorderSuggestions,
 } from '../application/use-cases/reorder-use-cases.js';
+import type { Access } from '../../../shared/domain/access.js';
+import { CurrentAccess, RequirePermission } from '../../../shared/presentation/decorators.js';
+import { visibilityOf } from '../../../shared/presentation/money-guard.js';
 
 const reorderQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
@@ -24,14 +27,19 @@ export class ReorderController {
   ) {}
 
   @Get('suggestions')
+  @RequirePermission('reorder.view')
   suggestions(@Query(new ZodValidationPipe(reorderQuerySchema)) query: ReorderQuery) {
     return this.getSuggestions.execute(query);
   }
 
   @Get('export')
+  @RequirePermission('reorder.view')
   @Header('Content-Type', XLSX_CONTENT_TYPE)
   @Header('Content-Disposition', 'attachment; filename="reposicion.xlsx"')
-  async export(@Query(new ZodValidationPipe(reorderQuerySchema)) query: ReorderQuery) {
-    return new StreamableFile(await this.exportSuggestions.execute(query));
+  async export(
+    @CurrentAccess() access: Access,
+    @Query(new ZodValidationPipe(reorderQuerySchema)) query: ReorderQuery,
+  ) {
+    return new StreamableFile(await this.exportSuggestions.execute(query, visibilityOf(access)));
   }
 }

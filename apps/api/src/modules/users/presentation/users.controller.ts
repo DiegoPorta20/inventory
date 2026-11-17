@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { Role, type AuthenticatedUser } from '../../../shared/domain/auth.js';
-import { CurrentUser, Roles } from '../../../shared/presentation/decorators.js';
+import { CurrentUser, RequireModule, Roles } from '../../../shared/presentation/decorators.js';
 import { ZodValidationPipe } from '../../../shared/presentation/zod-validation.pipe.js';
 import { CreateUser } from '../application/use-cases/create-user.js';
 import { ListUsers } from '../application/use-cases/list-users.js';
@@ -14,6 +14,7 @@ import {
 
 @Controller('users')
 @Roles(Role.ADMIN)
+@RequireModule('users')
 export class UsersController {
   constructor(
     private readonly listUsers: ListUsers,

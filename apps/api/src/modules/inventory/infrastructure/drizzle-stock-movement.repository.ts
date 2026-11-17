@@ -5,6 +5,7 @@ import { NotFoundError } from '../../../shared/domain/errors.js';
 import { startOfBusinessDay, startOfNextBusinessDay } from '../../../shared/domain/time.js';
 import { DatabaseService } from '../../../shared/infrastructure/database/database.service.js';
 import { products, stockMovements, users } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import {
   StockMovementRepository,
   type MovementFilters,
@@ -31,18 +32,22 @@ const escapeLike = (value: string): string => value.replace(/[\\%_]/g, '\\$&');
 
 @Injectable()
 export class DrizzleStockMovementRepository extends StockMovementRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
   }
 
   async create(movement: NewStockMovement): Promise<StockMovement> {
     const [result] = await this.database.db.insert(stockMovements).values({
+      companyId: this.tenant.companyId,
       productId: movement.productId,
       type: movement.type,
       reason: movement.reason,
       quantity: movement.quantity,
       stockAfter: movement.stockAfter,
-      unitPriceUsd: movement.unitPriceUsd ?? null,
+      unitPricePen: movement.unitPricePen ?? null,
       counterparty: movement.counterparty ?? null,
       referenceType: movement.referenceType ?? null,
       referenceId: movement.referenceId ?? null,
@@ -53,7 +58,12 @@ export class DrizzleStockMovementRepository extends StockMovementRepository {
     const [row] = await this.database.db
       .select()
       .from(stockMovements)
-      .where(eq(stockMovements.id, result.insertId))
+      .where(
+        and(
+          eq(stockMovements.id, result.insertId),
+          eq(stockMovements.companyId, this.tenant.companyId),
+        ),
+      )
       .limit(1);
     if (!row) throw new NotFoundError('Stock movement', result.insertId);
     return toMovement(row);
@@ -113,7 +123,7 @@ export class DrizzleStockMovementRepository extends StockMovementRepository {
   }
 
   private conditions(filters: MovementFilters): SQL[] {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [eq(stockMovements.companyId, this.tenant.companyId)];
     if (filters.productId) conditions.push(eq(stockMovements.productId, filters.productId));
     if (filters.type) conditions.push(eq(stockMovements.type, filters.type));
     if (filters.reason) conditions.push(eq(stockMovements.reason, filters.reason));

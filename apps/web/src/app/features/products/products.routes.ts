@@ -12,6 +12,11 @@ export const PRODUCTS_ROUTES: Routes = [
     title: 'Nuevo producto · Inventario',
   },
   {
+    path: 'import',
+    loadComponent: () => import('./pages/product-import.page').then((m) => m.ProductImportPage),
+    title: 'Importar productos · Inventario',
+  },
+  {
     path: ':id',
     loadComponent: () => import('./pages/product-detail.page').then((m) => m.ProductDetailPage),
     title: 'Producto · Inventario',

@@ -3,6 +3,7 @@ import { eq, ne, and, count, sql } from 'drizzle-orm';
 import { NotFoundError } from '../../../shared/domain/errors.js';
 import { DatabaseService } from '../../../shared/infrastructure/database/database.service.js';
 import { categories, products } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import {
   CategoryRepository,
   type CategoryChanges,
@@ -20,8 +21,15 @@ const columns = {
 
 @Injectable()
 export class DrizzleCategoryRepository extends CategoryRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
+  }
+
+  private get inCompany() {
+    return eq(categories.companyId, this.tenant.companyId);
   }
 
   async findAllWithCounts(): Promise<CategoryWithCount[]> {
@@ -29,6 +37,7 @@ export class DrizzleCategoryRepository extends CategoryRepository {
       .select({ ...columns, productCount: count(products.id) })
       .from(categories)
       .leftJoin(products, eq(products.categoryId, categories.id))
+      .where(this.inCompany)
       .groupBy(categories.id)
       .orderBy(sql`${categories.sortOrder}`, categories.name);
     return rows.map((row) => ({ ...row, productCount: Number(row.productCount) }));
@@ -38,15 +47,15 @@ export class DrizzleCategoryRepository extends CategoryRepository {
     const [row] = await this.database.db
       .select(columns)
       .from(categories)
-      .where(eq(categories.id, id))
+      .where(and(eq(categories.id, id), this.inCompany))
       .limit(1);
     return row ?? null;
   }
 
   async slugExists(slug: string, exceptId?: number): Promise<boolean> {
     const condition = exceptId
-      ? and(eq(categories.slug, slug), ne(categories.id, exceptId))
-      : eq(categories.slug, slug);
+      ? and(eq(categories.slug, slug), ne(categories.id, exceptId), this.inCompany)
+      : and(eq(categories.slug, slug), this.inCompany);
     const [row] = await this.database.db
       .select({ id: categories.id })
       .from(categories)
@@ -59,7 +68,7 @@ export class DrizzleCategoryRepository extends CategoryRepository {
     const [row] = await this.database.db
       .select({ value: count() })
       .from(categories)
-      .where(eq(categories.parentId, id));
+      .where(and(eq(categories.parentId, id), this.inCompany));
     return Number(row?.value ?? 0);
   }
 
@@ -67,12 +76,14 @@ export class DrizzleCategoryRepository extends CategoryRepository {
     const [row] = await this.database.db
       .select({ value: count() })
       .from(products)
-      .where(eq(products.categoryId, id));
+      .where(and(eq(products.categoryId, id), eq(products.companyId, this.tenant.companyId)));
     return Number(row?.value ?? 0);
   }
 
   async create(category: NewCategory): Promise<Category> {
-    const [result] = await this.database.db.insert(categories).values(category);
+    const [result] = await this.database.db
+      .insert(categories)
+      .values({ ...category, companyId: this.tenant.companyId });
     return this.requireById(result.insertId);
   }
 
@@ -81,13 +92,16 @@ export class DrizzleCategoryRepository extends CategoryRepository {
       Object.entries(changes).filter(([, value]) => value !== undefined),
     );
     if (Object.keys(values).length > 0) {
-      await this.database.db.update(categories).set(values).where(eq(categories.id, id));
+      await this.database.db
+        .update(categories)
+        .set(values)
+        .where(and(eq(categories.id, id), this.inCompany));
     }
     return this.requireById(id);
   }
 
   async delete(id: number): Promise<void> {
-    await this.database.db.delete(categories).where(eq(categories.id, id));
+    await this.database.db.delete(categories).where(and(eq(categories.id, id), this.inCompany));
   }
 
   private async requireById(id: number): Promise<Category> {

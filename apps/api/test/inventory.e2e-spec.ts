@@ -6,7 +6,40 @@ import { AppModule } from '../src/app.module.js';
 import { setupApp } from '../src/app.setup.js';
 import { loadEnv } from '../src/config/env.js';
 import { ensureAdmin, ensureTaxonomy } from '../src/scripts/seed-data.js';
+import { ALL_MODULES } from '../src/shared/domain/permissions.js';
 import { DatabaseService } from '../src/shared/infrastructure/database/database.service.js';
+import { CompanyDirectory } from '../src/modules/company-directory/application/ports/company-directory.js';
+import type { CompanyProfile } from '../src/modules/company-directory/domain/company-profile.js';
+
+const COMPANY_SLUG = 'testco';
+const COMPANY_ID = 1;
+
+const TEST_COMPANY: CompanyProfile = {
+  id: COMPANY_ID,
+  slug: COMPANY_SLUG,
+  name: 'Test Co',
+  status: 'ACTIVE',
+  config: {
+    branding: {
+      appName: 'Test',
+      tagline: null,
+      logoUrl: null,
+      faviconUrl: null,
+      primaryColor: '#273f85',
+      accentColor: null,
+      palette: { primary: {}, accent: {} },
+    },
+    modules: [...ALL_MODULES],
+    permissions: { PERSONAL: [] },
+    limits: { maxUsers: null },
+  },
+};
+
+/** Stands in for config_inventory so the e2e suite needs no second service. */
+class FakeCompanyDirectory extends CompanyDirectory {
+  findBySlug = async (slug: string) => (slug === COMPANY_SLUG ? TEST_COMPANY : null);
+  findById = async (id: number) => (id === COMPANY_ID ? TEST_COMPANY : null);
+}
 
 describe('Inventory API (e2e)', () => {
   let app: NestExpressApplication;
@@ -15,14 +48,17 @@ describe('Inventory API (e2e)', () => {
 
   beforeAll(async () => {
     const env = loadEnv();
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(CompanyDirectory)
+      .useValue(new FakeCompanyDirectory())
+      .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
     setupApp(app, env);
     await app.init();
 
     const { db } = app.get(DatabaseService);
-    await ensureAdmin(db, env);
-    await ensureTaxonomy(db);
+    await ensureAdmin(db, env, COMPANY_ID);
+    await ensureTaxonomy(db, COMPANY_ID);
     api = request.agent(app.getHttpServer());
   });
 
@@ -37,11 +73,11 @@ describe('Inventory API (e2e)', () => {
   it('rejects wrong credentials and accepts valid ones', async () => {
     await api
       .post('/api/auth/login')
-      .send({ email: 'admin@test.local', password: 'wrong-password' })
+      .send({ company: COMPANY_SLUG, email: 'admin@test.local', password: 'wrong-password' })
       .expect(401);
     const login = await api
       .post('/api/auth/login')
-      .send({ email: 'admin@test.local', password: 'Passw0rd!test' })
+      .send({ company: COMPANY_SLUG, email: 'admin@test.local', password: 'Passw0rd!test' })
       .expect(200);
     expect(login.body.role).toBe('ADMIN');
     expect(login.body.passwordHash).toBeUndefined();
@@ -56,7 +92,7 @@ describe('Inventory API (e2e)', () => {
   it('creates a product with an internal code and rejects duplicate codes', async () => {
     const created = await api
       .post('/api/products')
-      .send({ name: 'Sello de copa', unit: 'PCS', minStock: 10, reorderQuantity: 20, costUsd: 2.5 })
+      .send({ name: 'Sello de copa', unit: 'PCS', minStock: 10, reorderQuantity: 20, costPen: 2.5 })
       .expect(201);
     productId = created.body.id;
     expect(created.body.code).toMatch(/^INT-\d{4}$/);
@@ -107,7 +143,7 @@ describe('Inventory API (e2e)', () => {
   it('stops suggesting products that are already on order and receives imports into stock', async () => {
     const order = await api
       .post('/api/imports')
-      .send({ status: 'ORDERED', items: [{ productId, quantityOrdered: 30, unitCostUsd: 3 }] })
+      .send({ status: 'ORDERED', items: [{ productId, quantityOrdered: 30, unitCostPen: 3 }] })
       .expect(201);
 
     const afterOrder = await api.get('/api/reorder/suggestions').expect(200);
@@ -122,7 +158,7 @@ describe('Inventory API (e2e)', () => {
 
     const product = await api.get(`/api/products/${productId}`).expect(200);
     expect(product.body.stock).toBe(37);
-    expect(product.body.costUsd).toBe(3);
+    expect(product.body.costPen).toBe(3);
 
     await api.patch(`/api/imports/${order.body.id}`).send({ notes: 'late' }).expect(422);
     await api.post(`/api/imports/${order.body.id}/receive`).send({}).expect(422);
@@ -156,7 +192,7 @@ describe('Inventory API (e2e)', () => {
     await api.post(`/api/stock-counts/${count.body.id}/complete`).expect(422);
   });
 
-  it('prices products with IGV and exchange rate, and recalculates when settings change', async () => {
+  it('prices products in soles with IGV, and recalculates when the IGV rate changes', async () => {
     const costCenter = await api
       .post('/api/cost-centers')
       .send({ name: 'Repuesto Jumbo' })
@@ -164,11 +200,11 @@ describe('Inventory API (e2e)', () => {
     await api
       .patch(`/api/products/${productId}`)
       .send({
-        priceUsd: 100,
-        costUsd: 60,
+        pricePen: 100,
+        costPen: 60,
         costCenterId: costCenter.body.id,
         specification: 'M12',
-        wholesalePriceUsd: 90,
+        wholesalePricePen: 90,
         wholesaleMinQty: 10,
       })
       .expect(200);
@@ -176,24 +212,24 @@ describe('Inventory API (e2e)', () => {
     const detail = await api.get(`/api/products/${productId}`).expect(200);
     expect(detail.body.costCenterName).toBe('Repuesto Jumbo');
     expect(detail.body.pricing.retail).toMatchObject({
-      priceUsd: 100,
-      igvUsd: 18,
-      priceWithIgvPen: 424.8,
+      pricePen: 100,
+      igvPen: 18,
+      priceWithIgvPen: 118,
     });
     expect(detail.body.pricing.wholesale.minQty).toBe(10);
     expect(detail.body.pricing.marginPercent).toBe(40);
 
-    await api.get('/api/settings/pricing').expect(200, { exchangeRate: 3.6, igvRate: 0.18 });
-    await api.put('/api/settings/pricing').send({ exchangeRate: 4 }).expect(200);
+    await api.get('/api/settings/pricing').expect(200, { igvRate: 0.18 });
+    await api.put('/api/settings/pricing').send({ igvRate: 0.1 }).expect(200);
     const repriced = await api.get(`/api/products/${productId}`).expect(200);
-    expect(repriced.body.pricing.retail.priceWithIgvPen).toBe(472);
-    await api.put('/api/settings/pricing').send({ exchangeRate: 3.6 }).expect(200);
+    expect(repriced.body.pricing.retail.priceWithIgvPen).toBe(110);
+    await api.put('/api/settings/pricing').send({ igvRate: 0.18 }).expect(200);
 
     const priced = await api
       .get(`/api/products?hasPrice=true&costCenterId=${costCenter.body.id}`)
       .expect(200);
     expect(priced.body.items.map((item: { id: number }) => item.id)).toEqual([productId]);
-    await api.put('/api/settings/pricing').send({ exchangeRate: -1 }).expect(400);
+    await api.put('/api/settings/pricing').send({ igvRate: 2 }).expect(400);
 
     const list = await api.get('/api/products/price-list/export').buffer(true).expect(200);
     expect(list.headers['content-type']).toContain('spreadsheetml');

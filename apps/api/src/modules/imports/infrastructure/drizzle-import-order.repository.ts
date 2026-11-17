@@ -10,6 +10,7 @@ import {
   products,
   suppliers,
 } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import {
   ImportOrderRepository,
   type ImportItemDraft,
@@ -39,8 +40,8 @@ const summaryColumns = {
   itemCount: itemAggregate(sql`COUNT(*)`),
   totalOrdered: itemAggregate(sql`SUM(${importOrderItems.quantityOrdered})`),
   totalReceived: itemAggregate(sql`SUM(${importOrderItems.quantityReceived})`),
-  totalCostUsd: itemAggregate(
-    sql`SUM(${importOrderItems.quantityOrdered} * ${importOrderItems.unitCostUsd})`,
+  totalCostPen: itemAggregate(
+    sql`SUM(${importOrderItems.quantityOrdered} * ${importOrderItems.unitCostPen})`,
   ),
 };
 
@@ -50,7 +51,7 @@ type SummaryRow = {
   itemCount: number;
   totalOrdered: number;
   totalReceived: number;
-  totalCostUsd: number;
+  totalCostPen: number;
 };
 
 function toSummary(row: SummaryRow): ImportOrderSummary {
@@ -65,14 +66,30 @@ function toSummary(row: SummaryRow): ImportOrderSummary {
     itemCount: row.itemCount,
     totalOrdered: row.totalOrdered,
     totalReceived: row.totalReceived,
-    totalCostUsd: row.totalCostUsd,
+    totalCostPen: row.totalCostPen,
   };
 }
 
 @Injectable()
 export class DrizzleImportOrderRepository extends ImportOrderRepository {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
+  }
+
+  private get inCompany() {
+    return eq(importOrders.companyId, this.tenant.companyId);
+  }
+
+  private async assertOwned(id: number): Promise<void> {
+    const [row] = await this.database.db
+      .select({ id: importOrders.id })
+      .from(importOrders)
+      .where(and(eq(importOrders.id, id), this.inCompany))
+      .limit(1);
+    if (!row) throw new NotFoundError('Import order', id);
   }
 
   async list(filters: ImportOrderFilters, page: PageRequest): Promise<Page<ImportOrderSummary>> {
@@ -90,7 +107,9 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
   }
 
   async findById(id: number): Promise<ImportOrderDetail | null> {
-    const [row] = await this.summaryQuery().where(eq(importOrders.id, id)).limit(1);
+    const [row] = await this.summaryQuery()
+      .where(and(eq(importOrders.id, id), this.inCompany))
+      .limit(1);
     if (!row) return null;
 
     const items = await this.database.db
@@ -103,7 +122,7 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
         unit: products.unit,
         quantityOrdered: importOrderItems.quantityOrdered,
         quantityReceived: importOrderItems.quantityReceived,
-        unitCostUsd: importOrderItems.unitCostUsd,
+        unitCostPen: importOrderItems.unitCostPen,
         notes: importOrderItems.notes,
       })
       .from(importOrderItems)
@@ -118,7 +137,7 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
     const [row] = await this.database.db
       .select({ id: importOrders.id })
       .from(importOrders)
-      .where(eq(importOrders.number, number))
+      .where(and(eq(importOrders.number, number), this.inCompany))
       .limit(1);
     return Boolean(row) && row?.id !== exceptId;
   }
@@ -126,7 +145,8 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
   async nextNumber(): Promise<number> {
     const [row] = await this.database.db
       .select({ value: sql<number>`COALESCE(MAX(${importOrders.number}), 0)`.mapWith(Number) })
-      .from(importOrders);
+      .from(importOrders)
+      .where(this.inCompany);
     return (row?.value ?? 0) + 1;
   }
 
@@ -134,7 +154,9 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
     return this.database.transaction(async () => {
       let id: number;
       try {
-        const [result] = await this.database.db.insert(importOrders).values(order);
+        const [result] = await this.database.db
+          .insert(importOrders)
+          .values({ ...order, companyId: this.tenant.companyId });
         id = result.insertId;
       } catch (error) {
         if (isDuplicateEntry(error))
@@ -152,12 +174,16 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
     items?: ImportItemDraft[],
   ): Promise<ImportOrderDetail> {
     return this.database.transaction(async () => {
+      await this.assertOwned(id);
       const values = Object.fromEntries(
         Object.entries(changes).filter(([, value]) => value !== undefined),
       );
       try {
         if (Object.keys(values).length > 0) {
-          await this.database.db.update(importOrders).set(values).where(eq(importOrders.id, id));
+          await this.database.db
+            .update(importOrders)
+            .set(values)
+            .where(and(eq(importOrders.id, id), this.inCompany));
         }
       } catch (error) {
         if (isDuplicateEntry(error)) throw new ConflictError('Import number already exists');
@@ -174,6 +200,7 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
   }
 
   async recordReceipt(id: number, lines: ReceivedLine[], receivedAt: string): Promise<void> {
+    await this.assertOwned(id);
     for (const line of lines) {
       await this.database.db
         .update(importOrderItems)
@@ -183,11 +210,11 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
     await this.database.db
       .update(importOrders)
       .set({ status: 'RECEIVED', receivedAt })
-      .where(eq(importOrders.id, id));
+      .where(and(eq(importOrders.id, id), this.inCompany));
   }
 
   async delete(id: number): Promise<void> {
-    await this.database.db.delete(importOrders).where(eq(importOrders.id, id));
+    await this.database.db.delete(importOrders).where(and(eq(importOrders.id, id), this.inCompany));
   }
 
   private summaryQuery() {
@@ -206,7 +233,7 @@ export class DrizzleImportOrderRepository extends ImportOrderRepository {
   }
 
   private conditions(filters: ImportOrderFilters): SQL[] {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [this.inCompany];
     if (filters.status) conditions.push(eq(importOrders.status, filters.status));
     if (filters.supplierId) conditions.push(eq(importOrders.supplierId, filters.supplierId));
 

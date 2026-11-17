@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { IconComponent } from './icon.component';
 import { ToastService } from './toast.service';
 
+/** Dark, high-contrast toasts: the icon colour carries the tone, the text stays readable. */
 @Component({
   selector: 'ui-toast-host',
   imports: [IconComponent],
@@ -13,24 +14,18 @@ import { ToastService } from './toast.service';
     >
       @for (toast of toasts.toasts(); track toast.id) {
         <div
-          class="pointer-events-auto flex items-start gap-3 rounded-lg border bg-white p-3 shadow-lg"
-          [class]="
-            toast.tone === 'error'
-              ? 'border-rose-200'
-              : toast.tone === 'success'
-                ? 'border-emerald-200'
-                : 'border-slate-200'
-          "
+          class="pop-in pointer-events-auto flex items-start gap-3 rounded-2xl bg-slate-900 p-3.5 pl-4 text-white shadow-xl"
+          style="transform-origin: bottom right"
           [attr.role]="toast.tone === 'error' ? 'alert' : 'status'"
         >
           <span
             class="mt-0.5"
             [class]="
               toast.tone === 'error'
-                ? 'text-rose-500'
+                ? 'text-rose-400'
                 : toast.tone === 'success'
-                  ? 'text-emerald-500'
-                  : 'text-sky-500'
+                  ? 'text-emerald-400'
+                  : 'text-sky-400'
             "
           >
             <ui-icon
@@ -40,10 +35,10 @@ import { ToastService } from './toast.service';
               [size]="5"
             />
           </span>
-          <p class="flex-1 text-sm text-slate-700">{{ toast.message }}</p>
+          <p class="flex-1 text-[13.5px] font-semibold">{{ toast.message }}</p>
           <button
             type="button"
-            class="text-slate-400 hover:text-slate-600"
+            class="flex size-7 items-center justify-center rounded-full text-slate-300 transition-colors duration-200 hover:bg-white/10 hover:text-white"
             aria-label="Cerrar"
             (click)="toasts.dismiss(toast.id)"
           >

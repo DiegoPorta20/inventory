@@ -35,9 +35,9 @@ export interface ProductDraft {
   minStock: number;
   reorderQuantity: number;
   location: string | null;
-  costUsd: number | null;
-  priceUsd: number | null;
-  wholesalePriceUsd: number | null;
+  costPen: number | null;
+  pricePen: number | null;
+  wholesalePricePen: number | null;
   wholesaleMinQty: number | null;
   isConsignment: boolean;
   notes: string | null;
@@ -65,6 +65,7 @@ export abstract class ProductRepository {
   abstract findById(id: number): Promise<Product | null>;
   abstract findByIdForUpdate(id: number): Promise<Product | null>;
   abstract findByCode(code: string): Promise<Product | null>;
+  abstract findByCodes(codes: string[]): Promise<Product[]>;
   abstract findDetail(id: number): Promise<ProductDetail | null>;
   abstract nextInternalSequence(): Promise<number>;
   abstract create(draft: ProductDraft, equipmentIds: number[]): Promise<Product>;

@@ -17,10 +17,10 @@ export interface Product {
   minStock: number;
   reorderQuantity: number;
   location: string | null;
-  costUsd: number | null;
-  /** Sale price in USD without IGV. */
-  priceUsd: number | null;
-  wholesalePriceUsd: number | null;
+  costPen: number | null;
+  /** Sale price in soles without IGV. */
+  pricePen: number | null;
+  wholesalePricePen: number | null;
   wholesaleMinQty: number | null;
   isConsignment: boolean;
   notes: string | null;

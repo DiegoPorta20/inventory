@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { count } from 'drizzle-orm';
+import { count, eq, inArray } from 'drizzle-orm';
 import type { Database } from '../shared/infrastructure/database/database.service.js';
 import {
   importOrderItems,
@@ -55,30 +55,53 @@ function* chunked<T>(items: T[], size = CHUNK): Generator<T[]> {
   for (let start = 0; start < items.length; start += size) yield items.slice(start, start + size);
 }
 
-async function clearInventory(db: Database): Promise<void> {
-  await db.delete(stockCountItems);
-  await db.delete(stockCounts);
-  await db.delete(stockMovements);
-  await db.delete(importOrderItems);
-  await db.delete(importOrders);
-  await db.delete(productEquipment);
-  await db.delete(products);
+/** Deletes only this company's inventory; child tables are reached through their parents. */
+async function clearInventory(db: Database, companyId: number): Promise<void> {
+  const countIds = db
+    .select({ id: stockCounts.id })
+    .from(stockCounts)
+    .where(eq(stockCounts.companyId, companyId));
+  const importIds = db
+    .select({ id: importOrders.id })
+    .from(importOrders)
+    .where(eq(importOrders.companyId, companyId));
+  const productIds = db
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.companyId, companyId));
+
+  await db.delete(stockCountItems).where(inArray(stockCountItems.stockCountId, countIds));
+  await db.delete(stockCounts).where(eq(stockCounts.companyId, companyId));
+  await db.delete(stockMovements).where(eq(stockMovements.companyId, companyId));
+  await db.delete(importOrderItems).where(inArray(importOrderItems.importOrderId, importIds));
+  await db.delete(importOrders).where(eq(importOrders.companyId, companyId));
+  await db.delete(productEquipment).where(inArray(productEquipment.productId, productIds));
+  await db.delete(products).where(eq(products.companyId, companyId));
 }
 
-async function applyPlan(db: Database, plan: ImportPlan, options: Options): Promise<void> {
-  const categoryIds = await ensureTaxonomy(db);
-  const equipmentIds = await ensureEquipment(db);
+async function applyPlan(
+  db: Database,
+  companyId: number,
+  plan: ImportPlan,
+  options: Options,
+): Promise<void> {
+  const categoryIds = await ensureTaxonomy(db, companyId);
+  const equipmentIds = await ensureEquipment(db, companyId);
 
-  const [existing] = await db.select({ value: count() }).from(products);
+  const [existing] = await db
+    .select({ value: count() })
+    .from(products)
+    .where(eq(products.companyId, companyId));
   if (Number(existing?.value ?? 0) > 0) {
     if (!options.reset)
       throw new Error('Products already exist. Re-run with --reset to replace inventory data.');
-    await clearInventory(db);
+    await clearInventory(db, companyId);
   }
 
   for (const batch of chunked(plan.products)) {
     await db.insert(products).values(
       batch.map((product) => ({
+        companyId,
         code: product.code,
         isInternalCode: product.isInternalCode,
         name: product.name,
@@ -90,7 +113,10 @@ async function applyPlan(db: Database, plan: ImportPlan, options: Options): Prom
       })),
     );
   }
-  const productRows = await db.select({ id: products.id, code: products.code }).from(products);
+  const productRows = await db
+    .select({ id: products.id, code: products.code })
+    .from(products)
+    .where(eq(products.companyId, companyId));
   const productId = new Map(productRows.map((row) => [row.code, row.id]));
 
   const links = plan.products.flatMap((product) =>
@@ -104,6 +130,7 @@ async function applyPlan(db: Database, plan: ImportPlan, options: Options): Prom
   const importId = new Map<number, number>();
   for (const order of plan.imports) {
     const [result] = await db.insert(importOrders).values({
+      companyId,
       number: order.number,
       status: 'RECEIVED',
       receivedAt: options.snapshot,
@@ -125,11 +152,20 @@ async function applyPlan(db: Database, plan: ImportPlan, options: Options): Prom
   const movements: (typeof stockMovements.$inferInsert)[] = [];
   const push = (
     code: string,
-    entry: Omit<typeof stockMovements.$inferInsert, 'productId' | 'stockAfter' | 'occurredAt'>,
+    entry: Omit<
+      typeof stockMovements.$inferInsert,
+      'companyId' | 'productId' | 'stockAfter' | 'occurredAt'
+    >,
   ) => {
     const stockAfter = (running.get(code) ?? 0) + entry.quantity;
     running.set(code, stockAfter);
-    movements.push({ ...entry, productId: productId.get(code) as number, stockAfter, occurredAt });
+    movements.push({
+      ...entry,
+      companyId,
+      productId: productId.get(code) as number,
+      stockAfter,
+      occurredAt,
+    });
   };
 
   for (const order of plan.imports) {
@@ -194,9 +230,10 @@ report(plan);
 if (options.dryRun) {
   console.log('Dry run: nothing was written');
 } else {
-  const { db, close } = openScriptContext();
+  const { db, company, close } = openScriptContext();
   try {
-    await db.transaction((tx) => applyPlan(tx as unknown as Database, plan, options));
+    console.log(`Importing into company: ${company.id}`);
+    await db.transaction((tx) => applyPlan(tx as unknown as Database, company.id, plan, options));
     console.log('Import completed');
   } finally {
     await close();

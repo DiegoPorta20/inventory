@@ -43,7 +43,7 @@ const round = (value: number, decimals = 4) => Math.round(value * 10 ** decimals
 const logUniform = (min: number, max: number) => Math.exp(between(Math.log(min), Math.log(max)));
 const chance = (probability: number) => random() < probability;
 
-const PRICE_RANGE_USD: Record<string, [number, number]> = {
+const PRICE_RANGE_PEN: Record<string, [number, number]> = {
   equipment: [1500, 9000],
   drilling: [15, 300],
   fasteners: [0.3, 4],
@@ -96,16 +96,19 @@ interface Row {
   stock: number;
   minStock: number;
   reorderQuantity: number;
-  costUsd: number | null;
-  priceUsd: number | null;
-  wholesalePriceUsd: number | null;
+  costPen: number | null;
+  pricePen: number | null;
+  wholesalePricePen: number | null;
   location: string | null;
   costCenterId: number | null;
   categoryId: number | null;
 }
 
-async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
-  const allCategories = await db.select().from(categories);
+async function fillCommercialData(db: Database, companyId: number): Promise<Map<number, Row>> {
+  const allCategories = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.companyId, companyId));
   const byId = new Map(allCategories.map((c) => [c.id, c]));
   const rootSlug = (categoryId: number | null): string => {
     const category = categoryId ? byId.get(categoryId) : undefined;
@@ -113,35 +116,40 @@ async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
     return root?.slug ?? 'uncategorized';
   };
 
-  const centers = new Map((await db.select().from(costCenters)).map((c) => [c.name, c.id]));
+  const centers = new Map(
+    (await db.select().from(costCenters).where(eq(costCenters.companyId, companyId))).map((c) => [
+      c.name,
+      c.id,
+    ]),
+  );
   const centerId = async (name: string) => {
     const known = centers.get(name);
     if (known) return known;
-    const [result] = await db.insert(costCenters).values({ name });
+    const [result] = await db.insert(costCenters).values({ companyId, name });
     centers.set(name, result.insertId);
     return result.insertId;
   };
 
-  const rows = await db.select().from(products);
+  const rows = await db.select().from(products).where(eq(products.companyId, companyId));
   const state = new Map<number, Row>();
 
   for (const product of rows) {
     const slug = rootSlug(product.categoryId);
-    const [min, max] = PRICE_RANGE_USD[slug] ?? [3, 60];
+    const [min, max] = PRICE_RANGE_PEN[slug] ?? [3, 60];
     const changes: Partial<typeof products.$inferInsert> = {};
-    let { costUsd, priceUsd } = product;
+    let { costPen, pricePen } = product;
 
-    if (priceUsd === null) {
-      costUsd ??= round(logUniform(min, max));
-      priceUsd = round(costUsd * between(1.3, 1.9));
-      changes.priceUsd = priceUsd;
-    } else if (costUsd === null) {
-      costUsd = round(priceUsd / between(1.25, 1.7));
+    if (pricePen === null) {
+      costPen ??= round(logUniform(min, max));
+      pricePen = round(costPen * between(1.3, 1.9));
+      changes.pricePen = pricePen;
+    } else if (costPen === null) {
+      costPen = round(pricePen / between(1.25, 1.7));
     }
-    if (product.costUsd === null) changes.costUsd = costUsd;
+    if (product.costPen === null) changes.costPen = costPen;
 
-    if (product.wholesalePriceUsd === null && chance(0.15)) {
-      changes.wholesalePriceUsd = round(priceUsd * between(0.85, 0.93));
+    if (product.wholesalePricePen === null && chance(0.15)) {
+      changes.wholesalePricePen = round(pricePen * between(0.85, 0.93));
       changes.wholesaleMinQty = pick([6, 12, 24, 50]);
     }
     if (product.location === null && chance(0.85)) {
@@ -177,7 +185,10 @@ async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
     }
 
     if (Object.keys(changes).length > 0) {
-      await db.update(products).set(changes).where(eq(products.id, product.id));
+      await db
+        .update(products)
+        .set(changes)
+        .where(and(eq(products.id, product.id), eq(products.companyId, companyId)));
     }
     state.set(product.id, {
       id: product.id,
@@ -185,9 +196,9 @@ async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
       stock: product.stock,
       minStock,
       reorderQuantity,
-      costUsd,
-      priceUsd,
-      wholesalePriceUsd: changes.wholesalePriceUsd ?? product.wholesalePriceUsd,
+      costPen,
+      pricePen,
+      wholesalePricePen: changes.wholesalePricePen ?? product.wholesalePricePen,
       location: changes.location ?? product.location,
       costCenterId: changes.costCenterId ?? product.costCenterId,
       categoryId: product.categoryId,
@@ -196,12 +207,16 @@ async function fillCommercialData(db: Database): Promise<Map<number, Row>> {
   return state;
 }
 
-async function ensureSuppliers(db: Database): Promise<number[]> {
-  const existing = await db.select({ id: suppliers.id }).from(suppliers);
+async function ensureSuppliers(db: Database, companyId: number): Promise<number[]> {
+  const existing = await db
+    .select({ id: suppliers.id })
+    .from(suppliers)
+    .where(eq(suppliers.companyId, companyId));
   if (existing.length > 0) return existing.map((s) => s.id);
   const ids: number[] = [];
   for (const supplier of SUPPLIERS) {
     const [result] = await db.insert(suppliers).values({
+      companyId,
       ...supplier,
       email: `ventas@${supplier.name.split(' ')[0]?.toLowerCase()}.example`,
     });
@@ -217,13 +232,14 @@ interface MovementEvent {
   reason: 'SALE' | 'CUSTOMER_RETURN' | 'DAMAGE' | 'IMPORT_RECEIPT';
   quantity: number;
   counterparty?: string;
-  unitPriceUsd?: number | null;
+  unitPricePen?: number | null;
   referenceId?: number;
   note?: string;
 }
 
 async function createImports(
   db: Database,
+  companyId: number,
   state: Map<number, Row>,
   supplierIds: number[],
   now: Date,
@@ -235,7 +251,8 @@ async function createImports(
 }> {
   const [last] = await db
     .select({ value: sql<number>`COALESCE(MAX(${importOrders.number}), 0)`.mapWith(Number) })
-    .from(importOrders);
+    .from(importOrders)
+    .where(eq(importOrders.companyId, companyId));
   let number = (last?.value ?? 0) + 1;
 
   const needing = [...state.values()].filter((p) => p.stock <= p.minStock);
@@ -243,7 +260,7 @@ async function createImports(
   const lineFor = (product: Row) => ({
     productId: product.id,
     quantityOrdered: Math.max(product.reorderQuantity, product.minStock * 2 - product.stock, 1),
-    unitCostUsd: product.costUsd,
+    unitCostPen: product.costPen,
   });
   const take = (source: Row[], count: number) => {
     const copy = [...source];
@@ -296,6 +313,7 @@ async function createImports(
         : isoDate(new Date(now.getTime() + plan.expectedInDays * DAY_MS));
     const isReceived = plan.status === 'RECEIVED';
     const [result] = await db.insert(importOrders).values({
+      companyId,
       number,
       supplierId: pick(supplierIds),
       status: plan.status,
@@ -303,7 +321,6 @@ async function createImports(
       orderedAt,
       expectedAt,
       receivedAt: isReceived ? expectedAt : null,
-      exchangeRate: 3.6,
       notes: `${DEMO_MARKER}: sample import for testing`,
     });
     const lines = plan.lines.map(lineFor);
@@ -313,7 +330,7 @@ async function createImports(
         productId: line.productId,
         quantityOrdered: line.quantityOrdered,
         quantityReceived: isReceived ? line.quantityOrdered : 0,
-        unitCostUsd: line.unitCostUsd,
+        unitCostPen: line.unitCostPen,
       })),
     );
     if (isReceived) {
@@ -338,6 +355,7 @@ async function createImports(
 
 async function createMovements(
   db: Database,
+  companyId: number,
   state: Map<number, Row>,
   received: Awaited<ReturnType<typeof createImports>>,
   adminId: number | null,
@@ -364,7 +382,7 @@ async function createMovements(
         reason: 'SALE',
         quantity: integer(1, Math.max(1, Math.floor(product.stock / 3))),
         counterparty: pick(CUSTOMERS),
-        unitPriceUsd: product.priceUsd,
+        unitPricePen: product.pricePen,
       });
     }
   }
@@ -406,12 +424,13 @@ async function createMovements(
     }
     running.set(event.productId, current + delta);
     rows.push({
+      companyId,
       productId: event.productId,
       type: event.type,
       reason: event.reason,
       quantity: delta,
       stockAfter: current + delta,
-      unitPriceUsd: event.unitPriceUsd ?? null,
+      unitPricePen: event.unitPricePen ?? null,
       counterparty: event.counterparty ?? null,
       referenceType: event.reason === 'IMPORT_RECEIPT' ? 'IMPORT_ORDER' : null,
       referenceId: event.referenceId ?? null,
@@ -422,27 +441,41 @@ async function createMovements(
   }
   for (const batch of chunked(rows)) await db.insert(stockMovements).values(batch);
   for (const [productId, stock] of running) {
-    await db.update(products).set({ stock }).where(eq(products.id, productId));
+    await db
+      .update(products)
+      .set({ stock })
+      .where(and(eq(products.id, productId), eq(products.companyId, companyId)));
     const row = state.get(productId);
     if (row) row.stock = stock;
   }
   return rows.length;
 }
 
-async function createStockCount(db: Database, adminId: number | null): Promise<number> {
+async function createStockCount(
+  db: Database,
+  companyId: number,
+  adminId: number | null,
+): Promise<number> {
   const [category] = await db
     .select()
     .from(categories)
-    .where(eq(categories.slug, 'filters'))
+    .where(and(eq(categories.slug, 'filters'), eq(categories.companyId, companyId)))
     .limit(1);
   if (!category) return 0;
   const items = await db
     .select({ id: products.id, stock: products.stock })
     .from(products)
-    .where(and(eq(products.categoryId, category.id), eq(products.isActive, true)));
+    .where(
+      and(
+        eq(products.categoryId, category.id),
+        eq(products.isActive, true),
+        eq(products.companyId, companyId),
+      ),
+    );
   if (items.length === 0) return 0;
 
   const [count] = await db.insert(stockCounts).values({
+    companyId,
     name: 'Conteo de filtros (demo)',
     categoryId: category.id,
     note: DEMO_MARKER,
@@ -462,7 +495,7 @@ async function createStockCount(db: Database, adminId: number | null): Promise<n
   return items.length;
 }
 
-const { db, close } = openScriptContext();
+const { db, company, close } = openScriptContext();
 
 try {
   if (process.env.NODE_ENV === 'production')
@@ -471,7 +504,7 @@ try {
   const [existingDemo] = await db
     .select({ id: importOrders.id })
     .from(importOrders)
-    .where(like(importOrders.notes, `${DEMO_MARKER}%`))
+    .where(and(like(importOrders.notes, `${DEMO_MARKER}%`), eq(importOrders.companyId, company.id)))
     .limit(1);
   if (existingDemo) {
     throw new Error(
@@ -480,24 +513,36 @@ try {
   }
   const [{ total } = { total: 0 }] = await db
     .select({ total: sql<number>`COUNT(*)`.mapWith(Number) })
-    .from(products);
+    .from(products)
+    .where(eq(products.companyId, company.id));
   if (total === 0) throw new Error('No products found. Run `pnpm db:import-excel` first.');
 
   await db.transaction(async (transaction) => {
     const tx = transaction as unknown as Database;
     const now = new Date();
-    const [admin] = await tx.select({ id: users.id }).from(users).limit(1);
+    const [admin] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.companyId, company.id))
+      .limit(1);
 
-    const state = await fillCommercialData(tx);
-    const supplierIds = await ensureSuppliers(tx);
-    const received = await createImports(tx, state, supplierIds, now);
-    const movements = await createMovements(tx, state, received, admin?.id ?? null, now);
-    const countItems = await createStockCount(tx, admin?.id ?? null);
+    const state = await fillCommercialData(tx, company.id);
+    const supplierIds = await ensureSuppliers(tx, company.id);
+    const received = await createImports(tx, company.id, state, supplierIds, now);
+    const movements = await createMovements(
+      tx,
+      company.id,
+      state,
+      received,
+      admin?.id ?? null,
+      now,
+    );
+    const countItems = await createStockCount(tx, company.id, admin?.id ?? null);
 
     const withoutPrice = await tx
       .select({ id: products.id })
       .from(products)
-      .where(isNull(products.priceUsd));
+      .where(and(isNull(products.pricePen), eq(products.companyId, company.id)));
     console.log(
       `Products with commercial data: ${state.size} (without price: ${withoutPrice.length})`,
     );
@@ -507,7 +552,7 @@ try {
     console.log(`Stock movements created: ${movements}`);
     console.log(`Physical count items: ${countItems}`);
   });
-  console.log('Demo data created');
+  console.log(`Demo data created for company: ${company.id}`);
 } finally {
   await close();
 }

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Put } from '@nestjs/common';
 import { z } from 'zod';
 import { Role } from '../../../shared/domain/auth.js';
-import { Roles } from '../../../shared/presentation/decorators.js';
+import { Authenticated, RequireModule, Roles } from '../../../shared/presentation/decorators.js';
 import { ZodValidationPipe } from '../../../shared/presentation/zod-validation.pipe.js';
 import {
   GetPricingSettings,
@@ -9,7 +9,6 @@ import {
 } from '../application/use-cases/pricing-settings-use-cases.js';
 
 const updatePricingSchema = z.strictObject({
-  exchangeRate: z.number().gt(0).max(100).optional(),
   igvRate: z.number().min(0).max(1).optional(),
 });
 type UpdatePricingBody = z.infer<typeof updatePricingSchema>;
@@ -22,11 +21,13 @@ export class SettingsController {
   ) {}
 
   @Get()
+  @Authenticated()
   get() {
     return this.getPricing.execute();
   }
 
   @Put()
+  @RequireModule('settings')
   @Roles(Role.ADMIN)
   update(@Body(new ZodValidationPipe(updatePricingSchema)) body: UpdatePricingBody) {
     return this.updatePricing.execute(body);

@@ -39,6 +39,9 @@ const MESSAGES: Record<string, string> = {
   STOCK_COUNT_EMPTY_SCOPE: 'No hay productos activos en el alcance seleccionado.',
   CANNOT_MODIFY_SELF: 'No puedes desactivarte ni cambiar tu propio rol.',
   INVALID_CURRENT_PASSWORD: 'La contraseña actual es incorrecta.',
+  INVALID_SPREADSHEET: 'El archivo no es un Excel (.xlsx) válido.',
+  PRODUCT_IMPORT_HAS_ERRORS: 'El archivo tiene errores; corrígelos y vuelve a subirlo.',
+  PRODUCT_IMPORT_EMPTY: 'El archivo no tiene filas de productos.',
   TOO_MANY_REQUESTS: 'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
 };
 
@@ -50,6 +53,9 @@ export function apiError(error: unknown): ApiErrorBody | null {
 }
 
 export function errorMessage(error: unknown, fallback = 'Ocurrió un error inesperado.'): string {
+  if (error instanceof HttpErrorResponse && error.status === 413) {
+    return 'El archivo es demasiado grande (máximo 5 MB).';
+  }
   const body = apiError(error);
   if (body) return MESSAGES[body.code] ?? body.message ?? fallback;
   if (error instanceof HttpErrorResponse && error.status === 0) {

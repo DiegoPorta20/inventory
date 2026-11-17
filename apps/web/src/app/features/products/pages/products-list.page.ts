@@ -34,12 +34,15 @@ import {
   ProductFiltersComponent,
   type ProductFilterValues,
 } from '../components/product-filters.component';
+import { ClientConfigService } from '../../../core/config/client-config.service';
+import { CanDirective } from '../../../core/config/can.directive';
 
 const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'cost', 'price'];
 
 @Component({
   selector: 'app-products-list-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -55,7 +58,15 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header title="Productos" subtitle="Inventario, stock y clasificación.">
+      <a
+        *appCan="['products.import', 'products.costs.view', 'products.prices.view']"
+        class="btn btn-secondary"
+        routerLink="/products/import"
+      >
+        <ui-icon name="upload" [size]="4" /> Importar Excel
+      </a>
       <button
+        *appCan="'products.export'"
         type="button"
         class="btn btn-secondary"
         [disabled]="exporting()"
@@ -64,6 +75,7 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
         <ui-icon name="download" [size]="4" /> {{ exporting() ? 'Exportando…' : 'Exportar Excel' }}
       </button>
       <button
+        *appCan="['products.export', 'products.prices.view']"
         type="button"
         class="btn btn-secondary"
         [disabled]="exportingPriceList()"
@@ -72,10 +84,15 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
         <ui-icon name="download" [size]="4" />
         {{ exportingPriceList() ? 'Exportando…' : 'Lista de precios' }}
       </button>
-      <button type="button" class="btn btn-secondary" (click)="registerMovement()">
+      <button
+        *appCan="'movements.create'"
+        type="button"
+        class="btn btn-secondary"
+        (click)="registerMovement()"
+      >
         <ui-icon name="swap" [size]="4" /> Registrar movimiento
       </button>
-      <a class="btn btn-primary" routerLink="/products/new">
+      <a *appCan="'products.create'" class="btn btn-primary magnetic" routerLink="/products/new">
         <ui-icon name="plus" [size]="4" /> Nuevo producto
       </a>
     </ui-page-header>
@@ -115,7 +132,9 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
               Limpiar filtros
             </button>
           }
-          <a class="btn btn-primary" routerLink="/products/new">Nuevo producto</a>
+          <a *appCan="'products.create'" class="btn btn-primary" routerLink="/products/new"
+            >Nuevo producto</a
+          >
         </ui-empty-state>
       } @else {
         <div class="table-wrap">
@@ -153,22 +172,26 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                 <th class="num">Mín.</th>
                 <th class="num">En camino</th>
                 <th>Estado</th>
-                <th class="num" [attr.aria-sort]="ariaSort('cost')">
+                <th *appCan="'products.costs.view'" class="num" [attr.aria-sort]="ariaSort('cost')">
                   <button
                     type="button"
                     class="ml-auto flex items-center gap-1"
                     (click)="sortBy('cost')"
                   >
-                    Costo USD {{ sortIcon('cost') }}
+                    Costo S/ {{ sortIcon('cost') }}
                   </button>
                 </th>
-                <th class="num" [attr.aria-sort]="ariaSort('price')">
+                <th
+                  *appCan="'products.prices.view'"
+                  class="num"
+                  [attr.aria-sort]="ariaSort('price')"
+                >
                   <button
                     type="button"
                     class="ml-auto flex items-center gap-1"
                     (click)="sortBy('price')"
                   >
-                    Precio {{ sortIcon('price') }}
+                    Precio S/ (con IGV) {{ sortIcon('price') }}
                   </button>
                 </th>
               </tr>
@@ -219,13 +242,15 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
                     {{ product.incomingQty ? (product.incomingQty | quantity) : '—' }}
                   </td>
                   <td><ui-stock-badge [status]="product.stockStatus" /></td>
-                  <td class="num">{{ product.costUsd | usd }}</td>
-                  <td class="num">
+                  <td *appCan="'products.costs.view'" class="num">{{ product.costPen | pen }}</td>
+                  <td *appCan="'products.prices.view'" class="num">
                     @if (product.pricing.retail; as retail) {
                       <span class="block font-medium text-slate-800">{{
                         retail.priceWithIgvPen | pen
                       }}</span>
-                      <span class="block text-xs text-slate-400">{{ retail.priceUsd | usd }}</span>
+                      <span class="block text-xs text-slate-400"
+                        >{{ retail.pricePen | pen }} sin IGV</span
+                      >
                     } @else {
                       —
                     }
@@ -254,16 +279,36 @@ const SORT_COLUMNS: ProductSortBy[] = ['code', 'name', 'stock', 'updatedAt', 'co
             {{ selection().size }} seleccionado(s)
           </span>
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('category')">
+            <button
+              *appCan="'products.update'"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="bulk('category')"
+            >
               <ui-icon name="tag" [size]="4" /> Asignar categoría
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('costCenter')">
+            <button
+              *appCan="'products.update'"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="bulk('costCenter')"
+            >
               <ui-icon name="tag" [size]="4" /> Asignar centro de costo
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('stockLevels')">
+            <button
+              *appCan="'products.update'"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="bulk('stockLevels')"
+            >
               <ui-icon name="box" [size]="4" /> Definir stock mínimo / reposición
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="bulk('activation')">
+            <button
+              *appCan="'products.update'"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="bulk('activation')"
+            >
               <ui-icon name="refresh" [size]="4" /> Activar / desactivar
             </button>
           </div>
@@ -281,6 +326,7 @@ export class ProductsListPage {
   private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly config = inject(ClientConfigService);
 
   protected readonly unitLabels = UNIT_LABELS;
 
@@ -335,7 +381,10 @@ export class ProductsListPage {
   protected readonly categories = rxResource({ stream: () => this.api.listCategories() });
   protected readonly costCenters = rxResource({ stream: () => this.api.listCostCenters() });
   protected readonly equipment = rxResource({ stream: () => this.api.listEquipment() });
-  protected readonly imports = rxResource({ stream: () => this.api.listImports() });
+  protected readonly imports = rxResource({
+    params: () => (this.config.can('imports.view') ? true : undefined),
+    stream: () => this.api.listImports(),
+  });
 
   protected readonly items = computed(() =>
     this.products.hasValue() ? this.products.value().items : [],

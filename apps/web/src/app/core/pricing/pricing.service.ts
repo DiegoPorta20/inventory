@@ -3,14 +3,14 @@ import { Injectable, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { PriceBreakdown, PricingSettings } from '../../shared/models/models';
 
-const DEFAULTS: PricingSettings = { exchangeRate: 3.6, igvRate: 0.18 };
+const DEFAULTS: PricingSettings = { igvRate: 0.18 };
 
 const round = (value: number, decimals: number): number => {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
 };
 
-/** Exchange rate and IGV used to price products; mirrors the API's pricing rules. */
+/** IGV used to price products (all amounts are soles); mirrors the API's pricing rules. */
 @Injectable({ providedIn: 'root' })
 export class PricingService {
   private readonly http = inject(HttpClient);
@@ -25,20 +25,18 @@ export class PricingService {
     this.resource.reload();
   }
 
-  breakdown(priceUsd: number): PriceBreakdown {
-    const { igvRate, exchangeRate } = this.settings();
-    const withIgv = priceUsd * (1 + igvRate);
+  /** `pricePen` is the base price in soles without IGV (the stored value). */
+  breakdown(pricePen: number): PriceBreakdown {
+    const { igvRate } = this.settings();
     return {
-      priceUsd: round(priceUsd, 4),
-      igvUsd: round(priceUsd * igvRate, 4),
-      priceWithIgvUsd: round(withIgv, 4),
-      priceWithIgvPen: round(withIgv * exchangeRate, 2),
+      pricePen: round(pricePen, 4),
+      igvPen: round(pricePen * igvRate, 4),
+      priceWithIgvPen: round(pricePen * (1 + igvRate), 2),
     };
   }
 
-  /** Converts a sol price with IGV into the USD price without IGV that is stored. */
-  usdFromPen(penWithIgv: number): number {
-    const { igvRate, exchangeRate } = this.settings();
-    return round(penWithIgv / exchangeRate / (1 + igvRate), 4);
+  /** Converts a price with IGV into the base price without IGV that is stored. */
+  priceFromWithIgv(priceWithIgvPen: number): number {
+    return round(priceWithIgvPen / (1 + this.settings().igvRate), 4);
   }
 }

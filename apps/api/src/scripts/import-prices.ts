@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { formatInternalCode } from '../modules/products/domain/product.js';
 import { DEFAULT_PRICING } from '../modules/settings/domain/pricing.js';
 import type { Database } from '../shared/infrastructure/database/database.service.js';
@@ -15,6 +15,8 @@ import { planPrices, type MissingProduct, type PricePlan } from './excel/plan-pr
 import { readPriceSheet } from './excel/price-sheet.reader.js';
 import { openScriptContext } from './script-context.js';
 import { ensureEquipment, ensureTaxonomy } from './seed-data.js';
+
+const LEGACY_EXCHANGE_RATE = 3.6;
 
 interface Options {
   file: string;
@@ -43,29 +45,38 @@ function parseOptions(argv: string[]): Options {
   };
 }
 
-async function readIgvRate(db: Database): Promise<number> {
+async function readIgvRate(db: Database, companyId: number): Promise<number> {
   const [row] = await db
     .select()
     .from(settings)
-    .where(eq(settings.key, 'pricing.igvRate'))
+    .where(and(eq(settings.key, 'pricing.igvRate'), eq(settings.companyId, companyId)))
     .limit(1);
   return row ? Number(row.value) : DEFAULT_PRICING.igvRate;
 }
 
-async function applyPlan(db: Database, plan: PricePlan, options: Options): Promise<void> {
-  const equipmentIds = await ensureEquipment(db);
-  const categoryIds = await ensureTaxonomy(db);
+async function applyPlan(
+  db: Database,
+  companyId: number,
+  plan: PricePlan,
+  options: Options,
+  exchangeRate: number,
+): Promise<void> {
+  const equipmentIds = await ensureEquipment(db, companyId);
+  const categoryIds = await ensureTaxonomy(db, companyId);
   const costCenterIds = new Map(
-    (await db.select({ id: costCenters.id, name: costCenters.name }).from(costCenters)).map(
-      (row) => [row.name, row.id],
-    ),
+    (
+      await db
+        .select({ id: costCenters.id, name: costCenters.name })
+        .from(costCenters)
+        .where(eq(costCenters.companyId, companyId))
+    ).map((row) => [row.name, row.id]),
   );
 
   const costCenterId = async (name: string | null): Promise<number | null> => {
     if (!name) return null;
     const known = costCenterIds.get(name);
     if (known) return known;
-    const [result] = await db.insert(costCenters).values({ name });
+    const [result] = await db.insert(costCenters).values({ companyId, name });
     costCenterIds.set(name, result.insertId);
     return result.insertId;
   };
@@ -76,15 +87,18 @@ async function applyPlan(db: Database, plan: PricePlan, options: Options): Promi
 
   for (const update of plan.updates) {
     const changes: Partial<typeof products.$inferInsert> = { isConsignment: update.isConsignment };
-    if (update.priceUsd !== null) changes.priceUsd = update.priceUsd;
-    if (update.wholesalePriceUsd !== null) {
-      changes.wholesalePriceUsd = update.wholesalePriceUsd;
+    if (update.pricePen !== null) changes.pricePen = update.pricePen;
+    if (update.wholesalePricePen !== null) {
+      changes.wholesalePricePen = update.wholesalePricePen;
       changes.wholesaleMinQty = update.wholesaleMinQty;
     }
     if (update.specification) changes.specification = update.specification;
     const centerId = await costCenterId(update.costCenter);
     if (centerId) changes.costCenterId = centerId;
-    await db.update(products).set(changes).where(eq(products.id, update.productId));
+    await db
+      .update(products)
+      .set(changes)
+      .where(and(eq(products.id, update.productId), eq(products.companyId, companyId)));
 
     for (const name of update.equipmentNames) {
       const equipmentId = equipmentIds.get(name);
@@ -98,20 +112,22 @@ async function applyPlan(db: Database, plan: PricePlan, options: Options): Promi
 
   if (!options.createMissing) return;
 
-  const existingCodes = (await db.select({ code: products.code }).from(products)).map(
-    (r) => r.code,
-  );
+  const existingCodes = (
+    await db.select({ code: products.code }).from(products).where(eq(products.companyId, companyId))
+  ).map((r) => r.code);
   let internalSequence = existingCodes.filter((code) => code.startsWith('INT-')).length;
 
   const create = async ({ row, code, name, categorySlug }: MissingProduct): Promise<void> => {
     await db.insert(products).values({
+      companyId,
       code: code ?? formatInternalCode(++internalSequence),
       isInternalCode: code === null,
       name,
       unit: normalizeUnit(row.unit),
       categoryId: categoryIds.get(categorySlug) ?? null,
       costCenterId: await costCenterId(row.costCenter),
-      priceUsd: row.priceUsd,
+      pricePen:
+        row.priceUsd === null ? null : Math.round(row.priceUsd * exchangeRate * 10_000) / 10_000,
       stock: 0,
       notes: 'Created from the price list (no stock history)',
     });
@@ -119,15 +135,17 @@ async function applyPlan(db: Database, plan: PricePlan, options: Options): Promi
   for (const item of plan.missing.filter(({ row }) => row.priceUsd !== null)) await create(item);
 }
 
-function report(plan: PricePlan, exchangeRate: number | null): void {
-  const priced = plan.updates.filter((update) => update.priceUsd !== null);
-  console.log(`Exchange rate in file: ${exchangeRate ?? 'n/a'}`);
+function report(plan: PricePlan, exchangeRate: number, fromFile: boolean): void {
+  const priced = plan.updates.filter((update) => update.pricePen !== null);
+  console.log(
+    `The price list is in USD; converting to soles at ${exchangeRate} (${fromFile ? 'rate found in the file' : 'default rate: file has none'})`,
+  );
   console.log(`Matched products: ${plan.updates.length} (${priced.length} with price)`);
   console.log(
     `Products with several different prices (weighted average used): ${plan.updates.filter((u) => u.priceVariants > 1).length}`,
   );
   console.log(
-    `Wholesale prices: ${plan.updates.filter((u) => u.wholesalePriceUsd !== null).length}`,
+    `Wholesale prices: ${plan.updates.filter((u) => u.wholesalePricePen !== null).length}`,
   );
   console.log(`Consignment-only products: ${plan.updates.filter((u) => u.isConsignment).length}`);
   console.log(`Inventory products still without price: ${plan.productsWithoutPrice}`);
@@ -146,17 +164,22 @@ const sheet = await readPriceSheet(options.file);
 const context = openScriptContext();
 
 try {
-  const igvRate = await readIgvRate(context.db);
+  console.log(`Importing prices into company: ${context.company.id}`);
+  const igvRate = await readIgvRate(context.db, context.company.id);
   const inventory = await context.db
     .select({ id: products.id, code: products.code, name: products.name })
-    .from(products);
-  const plan = planPrices(sheet.rows, inventory, igvRate);
-  report(plan, sheet.exchangeRate);
+    .from(products)
+    .where(eq(products.companyId, context.company.id));
+  const exchangeRate = sheet.exchangeRate ?? LEGACY_EXCHANGE_RATE;
+  const plan = planPrices(sheet.rows, inventory, { igvRate, exchangeRate });
+  report(plan, exchangeRate, sheet.exchangeRate !== null);
 
   if (options.dryRun) {
     console.log('Dry run: nothing was written');
   } else {
-    await context.db.transaction((tx) => applyPlan(tx as unknown as Database, plan, options));
+    await context.db.transaction((tx) =>
+      applyPlan(tx as unknown as Database, context.company.id, plan, options, exchangeRate),
+    );
     console.log('Price import completed');
   }
 } finally {

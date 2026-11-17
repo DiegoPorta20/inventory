@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { MoneyVisibility } from '../../../../shared/application/money-visibility.js';
 import type { Page, PageRequest } from '../../../../shared/application/page.js';
 import { SpreadsheetWriter } from '../../../../shared/application/spreadsheet-writer.js';
 import { NotFoundError } from '../../../../shared/domain/errors.js';
@@ -57,6 +58,8 @@ export class GetProduct {
 
 const STATUS_LABEL = { OUT: 'Sin stock', LOW: 'Bajo', OK: 'OK' } as const;
 const MONEY = '#,##0.00';
+const COST_COLUMNS = new Set(['cost', 'costValue']);
+const PRICE_COLUMNS = new Set(['price', 'priceWithIgv', 'priceValue']);
 
 @Injectable()
 export class ExportProducts {
@@ -66,12 +69,16 @@ export class ExportProducts {
     private readonly spreadsheet: SpreadsheetWriter,
   ) {}
 
-  async execute(filters: ProductFilters): Promise<Buffer> {
+  async execute(filters: ProductFilters, visibility: MoneyVisibility): Promise<Buffer> {
     const [items, settings] = await Promise.all([
       this.products.searchAll(filters, EXPORT_LIMIT),
       this.pricingSettings.execute(),
     ]);
-    return this.spreadsheet.write({
+    const hidden = new Set<string>([
+      ...(visibility.costs ? [] : COST_COLUMNS),
+      ...(visibility.prices ? [] : PRICE_COLUMNS),
+    ]);
+    const spec = {
       name: 'Inventario',
       columns: [
         { header: 'Código', key: 'code', width: 20 },
@@ -86,11 +93,11 @@ export class ExportProducts {
         { header: 'Estado', key: 'status', width: 12 },
         { header: 'Ubicación', key: 'location', width: 16 },
         { header: 'Consignación', key: 'consignment', width: 14 },
-        { header: 'Costo USD', key: 'cost', width: 12, numFmt: MONEY },
-        { header: 'Precio USD sin IGV', key: 'price', width: 18, numFmt: MONEY },
-        { header: 'Precio S/ con IGV', key: 'pricePen', width: 18, numFmt: MONEY },
-        { header: 'Valor a costo USD', key: 'costValue', width: 18, numFmt: MONEY },
-        { header: 'Valor a precio USD', key: 'priceValue', width: 18, numFmt: MONEY },
+        { header: 'Costo S/ (sin IGV)', key: 'cost', width: 12, numFmt: MONEY },
+        { header: 'Precio S/ sin IGV', key: 'price', width: 18, numFmt: MONEY },
+        { header: 'Precio S/ con IGV', key: 'priceWithIgv', width: 18, numFmt: MONEY },
+        { header: 'Valor a costo S/', key: 'costValue', width: 18, numFmt: MONEY },
+        { header: 'Valor a precio S/ (sin IGV)', key: 'priceValue', width: 24, numFmt: MONEY },
       ],
       rows: items.map((item) => {
         const { pricing } = withPricing(item, settings);
@@ -107,13 +114,17 @@ export class ExportProducts {
           status: STATUS_LABEL[item.stockStatus],
           location: item.location,
           consignment: item.isConsignment ? 'Sí' : '',
-          cost: item.costUsd,
-          price: item.priceUsd,
-          pricePen: pricing.retail?.priceWithIgvPen ?? null,
-          costValue: item.costUsd == null ? null : item.costUsd * item.stock,
-          priceValue: item.priceUsd == null ? null : item.priceUsd * item.stock,
+          cost: item.costPen,
+          price: item.pricePen,
+          priceWithIgv: pricing.retail?.priceWithIgvPen ?? null,
+          costValue: item.costPen == null ? null : item.costPen * item.stock,
+          priceValue: item.pricePen == null ? null : item.pricePen * item.stock,
         };
       }),
+    };
+    return this.spreadsheet.write({
+      ...spec,
+      columns: spec.columns.filter((column) => !hidden.has(column.key)),
     });
   }
 }
@@ -143,16 +154,15 @@ export class ExportPriceList {
         { header: 'Centro de costo', key: 'costCenter', width: 20 },
         { header: 'Unidad', key: 'unit', width: 10 },
         { header: 'Stock', key: 'stock', width: 10 },
-        { header: 'Precio USD sin IGV', key: 'price', width: 18, numFmt: MONEY },
-        { header: `IGV ${settings.igvRate * 100}% USD`, key: 'igv', width: 14, numFmt: MONEY },
-        { header: 'Precio USD con IGV', key: 'priceIgv', width: 18, numFmt: MONEY },
+        { header: 'Precio S/ sin IGV', key: 'price', width: 18, numFmt: MONEY },
+        { header: `IGV ${settings.igvRate * 100}% S/`, key: 'igv', width: 14, numFmt: MONEY },
+        { header: 'Precio S/ con IGV', key: 'priceWithIgv', width: 18, numFmt: MONEY },
         {
-          header: `Precio S/ con IGV (T.C. ${settings.exchangeRate})`,
-          key: 'pricePen',
+          header: 'Precio por mayor S/ con IGV',
+          key: 'wholesaleWithIgv',
           width: 26,
           numFmt: MONEY,
         },
-        { header: 'Precio por mayor S/', key: 'wholesalePen', width: 20, numFmt: MONEY },
         { header: 'Mín. por mayor', key: 'wholesaleMin', width: 14 },
       ],
       rows: items.map((item) => {
@@ -164,11 +174,10 @@ export class ExportPriceList {
           costCenter: item.costCenterName,
           unit: item.unit,
           stock: item.stock,
-          price: pricing.retail?.priceUsd ?? null,
-          igv: pricing.retail?.igvUsd ?? null,
-          priceIgv: pricing.retail?.priceWithIgvUsd ?? null,
-          pricePen: pricing.retail?.priceWithIgvPen ?? null,
-          wholesalePen: pricing.wholesale?.priceWithIgvPen ?? null,
+          price: pricing.retail?.pricePen ?? null,
+          igv: pricing.retail?.igvPen ?? null,
+          priceWithIgv: pricing.retail?.priceWithIgvPen ?? null,
+          wholesaleWithIgv: pricing.wholesale?.priceWithIgvPen ?? null,
           wholesaleMin: pricing.wholesale?.minQty ?? null,
         };
       }),

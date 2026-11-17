@@ -30,7 +30,7 @@ let nextId = 0;
         <ui-icon name="search" [size]="4" />
       </span>
       <input
-        class="input pl-9"
+        class="input input-pill pl-9"
         type="text"
         role="combobox"
         autocomplete="off"
@@ -50,7 +50,7 @@ let nextId = 0;
       <ul
         [id]="listId"
         role="listbox"
-        class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+        class="pop-in absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto rounded-2xl border border-(--line) bg-white p-1.5 shadow-xl"
       >
         @if (loading()) {
           <li class="px-3 py-2 text-sm text-slate-500">Buscando…</li>
@@ -62,7 +62,7 @@ let nextId = 0;
             role="option"
             [id]="listId + '-' + i"
             [attr.aria-selected]="i === active()"
-            class="flex cursor-pointer items-center justify-between gap-3 px-3 py-2"
+            class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2"
             [class]="i === active() ? 'bg-brand-50' : 'hover:bg-slate-50'"
             (mousedown)="$event.preventDefault()"
             (click)="select(product)"

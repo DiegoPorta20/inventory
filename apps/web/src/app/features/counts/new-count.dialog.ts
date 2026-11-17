@@ -39,7 +39,13 @@ export function openNewCountDialog(dialog: Dialog) {
           <select id="count-category" class="input" formControlName="categoryId">
             <option [value]="0">Todas las categorías</option>
             @for (c of categoryOptions(); track c.id) {
-              <option [value]="c.id" [class.opt-root]="c.depth === 0" [class.opt-child]="c.depth > 0">{{ c.label }}</option>
+              <option
+                [value]="c.id"
+                [class.opt-root]="c.depth === 0"
+                [class.opt-child]="c.depth > 0"
+              >
+                {{ c.label }}
+              </option>
             }
           </select>
         </ui-field>

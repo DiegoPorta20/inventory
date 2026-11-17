@@ -27,7 +27,7 @@ export const registerMovementSchema = z.strictObject({
   type: z.enum(MOVEMENT_TYPES),
   reason: z.enum(MOVEMENT_REASONS),
   quantity: z.number().int().min(-10_000_000).max(10_000_000),
-  unitPriceUsd: z.number().min(0).max(99_999_999).nullable().optional(),
+  unitPricePen: z.number().min(0).max(99_999_999).nullable().optional(),
   counterparty: optionalText(160),
   note: optionalText(500),
   occurredAt: z.coerce.date().optional(),

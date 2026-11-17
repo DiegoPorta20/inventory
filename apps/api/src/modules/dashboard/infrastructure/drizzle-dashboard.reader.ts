@@ -9,6 +9,7 @@ import {
   stockMovements,
   users,
 } from '../../../shared/infrastructure/database/schema.js';
+import { TenantContext } from '../../../shared/infrastructure/tenant/tenant-context.js';
 import {
   DashboardReader,
   type CategoryStock,
@@ -23,7 +24,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class DrizzleDashboardReader extends DashboardReader {
-  constructor(private readonly database: DatabaseService) {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly tenant: TenantContext,
+  ) {
     super();
   }
 
@@ -32,11 +36,11 @@ export class DrizzleDashboardReader extends DashboardReader {
       .select({
         activeProducts: number(sql`COUNT(*)`),
         totalUnits: number(sql`COALESCE(SUM(${products.stock}), 0)`),
-        inventoryValueUsd: number(sql`COALESCE(SUM(${products.stock} * ${products.costUsd}), 0)`),
-        inventoryValueAtPriceUsd: number(
-          sql`COALESCE(SUM(${products.stock} * ${products.priceUsd}), 0)`,
+        inventoryValuePen: number(sql`COALESCE(SUM(${products.stock} * ${products.costPen}), 0)`),
+        inventoryValueAtPricePen: number(
+          sql`COALESCE(SUM(${products.stock} * ${products.pricePen}), 0)`,
         ),
-        withoutPrice: number(sql`COALESCE(SUM(${products.priceUsd} IS NULL), 0)`),
+        withoutPrice: number(sql`COALESCE(SUM(${products.pricePen} IS NULL), 0)`),
         consignmentUnits: number(
           sql`COALESCE(SUM(CASE WHEN ${products.isConsignment} THEN ${products.stock} ELSE 0 END), 0)`,
         ),
@@ -49,7 +53,7 @@ export class DrizzleDashboardReader extends DashboardReader {
         ),
       })
       .from(products)
-      .where(eq(products.isActive, true));
+      .where(and(eq(products.isActive, true), eq(products.companyId, this.tenant.companyId)));
 
     const [incoming] = await this.database.db
       .select({
@@ -60,13 +64,18 @@ export class DrizzleDashboardReader extends DashboardReader {
       })
       .from(importOrderItems)
       .innerJoin(importOrders, eq(importOrders.id, importOrderItems.importOrderId))
-      .where(sql`${importOrders.status} IN ('ORDERED', 'IN_TRANSIT')`);
+      .where(
+        and(
+          sql`${importOrders.status} IN ('ORDERED', 'IN_TRANSIT')`,
+          eq(importOrders.companyId, this.tenant.companyId),
+        ),
+      );
 
     return {
       activeProducts: stock?.activeProducts ?? 0,
       totalUnits: stock?.totalUnits ?? 0,
-      inventoryValueUsd: stock?.inventoryValueUsd ?? 0,
-      inventoryValueAtPriceUsd: stock?.inventoryValueAtPriceUsd ?? 0,
+      inventoryValuePen: stock?.inventoryValuePen ?? 0,
+      inventoryValueAtPricePen: stock?.inventoryValueAtPricePen ?? 0,
       withoutPrice: stock?.withoutPrice ?? 0,
       consignmentUnits: stock?.consignmentUnits ?? 0,
       outOfStock: stock?.outOfStock ?? 0,
@@ -84,14 +93,15 @@ export class DrizzleDashboardReader extends DashboardReader {
           categoryId: products.categoryId,
           products: number(sql`COUNT(*)`),
           units: number(sql`COALESCE(SUM(${products.stock}), 0)`),
-          valueUsd: number(sql`COALESCE(SUM(${products.stock} * ${products.costUsd}), 0)`),
+          valuePen: number(sql`COALESCE(SUM(${products.stock} * ${products.costPen}), 0)`),
         })
         .from(products)
-        .where(eq(products.isActive, true))
+        .where(and(eq(products.isActive, true), eq(products.companyId, this.tenant.companyId)))
         .groupBy(products.categoryId),
       this.database.db
         .select({ id: categories.id, name: categories.name, parentId: categories.parentId })
-        .from(categories),
+        .from(categories)
+        .where(eq(categories.companyId, this.tenant.companyId)),
     ]);
 
     const byId = new Map(allCategories.map((category) => [category.id, category]));
@@ -105,11 +115,11 @@ export class DrizzleDashboardReader extends DashboardReader {
         name: rootName,
         products: 0,
         units: 0,
-        valueUsd: 0,
+        valuePen: 0,
       };
       current.products += row.products;
       current.units += row.units;
-      current.valueUsd += row.valueUsd;
+      current.valuePen += row.valuePen;
       rolled.set(rootId, current);
     }
     return [...rolled.values()].sort((a, b) => b.units - a.units);
@@ -129,7 +139,12 @@ export class DrizzleDashboardReader extends DashboardReader {
         ),
       })
       .from(stockMovements)
-      .where(gte(stockMovements.occurredAt, since))
+      .where(
+        and(
+          gte(stockMovements.occurredAt, since),
+          eq(stockMovements.companyId, this.tenant.companyId),
+        ),
+      )
       .groupBy(day)
       .orderBy(day);
     return rows;
@@ -149,6 +164,7 @@ export class DrizzleDashboardReader extends DashboardReader {
       .innerJoin(products, eq(products.id, stockMovements.productId))
       .where(
         and(
+          eq(stockMovements.companyId, this.tenant.companyId),
           eq(stockMovements.reason, 'SALE'),
           gte(stockMovements.occurredAt, since),
           lt(stockMovements.quantity, 0),
@@ -176,6 +192,7 @@ export class DrizzleDashboardReader extends DashboardReader {
       .from(stockMovements)
       .innerJoin(products, eq(products.id, stockMovements.productId))
       .leftJoin(users, eq(users.id, stockMovements.userId))
+      .where(eq(stockMovements.companyId, this.tenant.companyId))
       .orderBy(desc(stockMovements.occurredAt), desc(stockMovements.id))
       .limit(limit);
   }

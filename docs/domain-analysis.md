@@ -73,9 +73,9 @@ Una sola hoja visible (`APU`, 582 filas de producto, 5 secciones: Minidumper, Ba
 | Descripción / Código | Misma identidad que el inventario (566 de 582 filas coinciden por código o nombre; hay códigos con errores de tipeo: `2O311…` con letra O, `20306D00354`) | `products` (se actualiza, no se duplica) |
 | Especificación | Medida o norma ("32mm x 90 cm", "Capacidad 1 TN"); algunas celdas traen texto chino que se descarta | `products.specification` |
 | Centro de costo | Línea de negocio: Minidumper, Repuesto Minidumper, Aceros SDS Max, Barrenos cónicos, Brocas de botones, Repuesto Jumbo | tabla `cost_centers`, `products.cost_center_id` |
-| Precio sin IGV $/unid | **Precio de venta base** en USD (valor fijo, no fórmula) | `products.price_usd` |
-| IGV / Precio con IGV / P.U. con IGV S/ | Derivados: IGV 18 % y tipo de cambio 3.6 | se calculan (`settings`: `pricing.igvRate`, `pricing.exchangeRate`) |
-| Descuento / Por mayor / Cantidad por mes (4 filas de aceros SDS Max) | Precio por mayor en S/ (ej. 350 → 300) desde 24 unidades | `wholesale_price_usd`, `wholesale_min_qty` |
+| Precio sin IGV $/unid | **Precio de venta base** (valor fijo, no fórmula). La hoja original está en USD; al cargarla se convierte a soles con el tipo de cambio de la propia hoja | `products.price_pen` (soles, sin IGV) |
+| IGV / Precio con IGV / P.U. con IGV S/ | Derivados: IGV 18 % sobre el precio sin IGV | se calculan (`settings`: `pricing.igvRate`) |
+| Descuento / Por mayor / Cantidad por mes (4 filas de aceros SDS Max) | Precio por mayor en S/ (ej. 350 → 300) desde 24 unidades | `wholesale_price_pen` (sin IGV), `wholesale_min_qty` |
 | Sección "Consignación" | Repuestos recibidos en consignación | `products.is_consignment` (solo si el código aparece únicamente en esa sección) |
 | Cant. total / Consumo / Stock (20-04-2026) | Foto de stock anterior al inventario del 30-09 | **No se importa** (el inventario del 30-09 manda) |
 
@@ -83,14 +83,14 @@ Hallazgos y decisiones:
 
 - 387 de los 581 productos del inventario tienen fila de precio; 361 con precio. Faltan precios de equipos (Winche, Ventiladores, Minidumper, Jumbo) y de buena parte de la tornillería.
 - 39 códigos aparecen con precios distintos (lotes con distinto costo de importación). Se usa el **promedio ponderado por cantidad** como precio único del producto.
-- Los precios comerciales se fijan en soles con IGV (350, 270, 390, 290) y el USD sin IGV es derivado; por eso se guarda en USD sin IGV y se muestran ambos.
+- Los precios comerciales se fijan en soles con IGV (350, 270, 390, 290). Se guarda el precio **sin IGV** en soles y se muestran ambos, siempre rotulados "sin IGV" / "con IGV". El sistema ya no maneja dólares ni tipo de cambio.
 - El Jumbo aparece como **DK0138** (lista de precios) y **WD561** (inventario): se asumen el mismo equipo y se unifican en el modelo "Jumbo DK0138". Los repuestos de las secciones Jumbo/Consignación/Yuchai se vinculan a él; los del motor Yuchai también a "Motor Yuchai".
 - El costo de adquisición por unidad existe en las hojas ocultas `#N` del primer Excel; todavía no se importa, por eso el margen solo se muestra cuando hay costo.
 
 ### Reglas de precio
 
-1. `price_usd` = precio de venta en USD **sin IGV**. `IGV = price × igvRate`; `S/ con IGV = price × (1 + igvRate) × exchangeRate`.
-2. Tipo de cambio e IGV se configuran en *Configuración* (por defecto 3.6 y 18 %); cambiar el tipo de cambio recalcula todos los precios en soles.
+1. `price_pen` = precio de venta en soles **sin IGV**. `IGV = price × igvRate`; `S/ con IGV = price × (1 + igvRate)`.
+2. El IGV se configura en *Configuración* (por defecto 18 %); al cambiarlo se recalculan todos los precios con IGV.
 3. Margen = `(precio − costo) / precio`, solo si hay costo y precio.
 4. El precio por mayor aplica desde `wholesale_min_qty` unidades.
 5. Una venta (`OUT / SALE`) propone como precio unitario el precio de venta del producto.

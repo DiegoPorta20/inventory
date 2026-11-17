@@ -16,7 +16,7 @@ export interface LedgerEntry {
   type: MovementType;
   reason: MovementReason;
   delta: number;
-  unitPriceUsd?: number | null;
+  unitPricePen?: number | null;
   counterparty?: string | null;
   referenceType?: ReferenceType | null;
   referenceId?: number | null;

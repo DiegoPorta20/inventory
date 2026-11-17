@@ -27,10 +27,16 @@ const updatedAt = () =>
 
 const money = (name: string) => decimal(name, { precision: 12, scale: 4, mode: 'number' });
 
+/**
+ * Every tenant-owned table carries this column; repositories must always filter by it.
+ * Companies live in config_inventory, so this is the id it assigned (no foreign key here).
+ */
+const companyId = () => int('company_id').notNull();
 export const users = mysqlTable(
   'users',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     email: varchar('email', { length: 190 }).notNull(),
     name: varchar('name', { length: 120 }).notNull(),
     passwordHash: varchar('password_hash', { length: 255 }).notNull(),
@@ -40,13 +46,14 @@ export const users = mysqlTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('users_email_uq').on(t.email)],
+  (t) => [uniqueIndex('users_company_email_uq').on(t.companyId, t.email)],
 );
 
 export const categories = mysqlTable(
   'categories',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     name: varchar('name', { length: 120 }).notNull(),
     slug: varchar('slug', { length: 140 }).notNull(),
     parentId: int('parent_id').references((): AnyMySqlColumn => categories.id, {
@@ -57,7 +64,7 @@ export const categories = mysqlTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex('categories_slug_uq').on(t.slug),
+    uniqueIndex('categories_company_slug_uq').on(t.companyId, t.slug),
     index('categories_parent_idx').on(t.parentId),
   ],
 );
@@ -66,6 +73,7 @@ export const suppliers = mysqlTable(
   'suppliers',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     name: varchar('name', { length: 160 }).notNull(),
     country: varchar('country', { length: 80 }),
     contactName: varchar('contact_name', { length: 120 }),
@@ -76,43 +84,51 @@ export const suppliers = mysqlTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('suppliers_name_uq').on(t.name)],
+  (t) => [uniqueIndex('suppliers_company_name_uq').on(t.companyId, t.name)],
 );
 
 export const equipmentModels = mysqlTable(
   'equipment_models',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     name: varchar('name', { length: 160 }).notNull(),
     brand: varchar('brand', { length: 80 }),
     description: text('description'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('equipment_models_name_uq').on(t.name)],
+  (t) => [uniqueIndex('equipment_models_company_name_uq').on(t.companyId, t.name)],
 );
 
 export const costCenters = mysqlTable(
   'cost_centers',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     name: varchar('name', { length: 120 }).notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex('cost_centers_name_uq').on(t.name)],
+  (t) => [uniqueIndex('cost_centers_company_name_uq').on(t.companyId, t.name)],
 );
 
-export const settings = mysqlTable('settings', {
-  key: varchar('key', { length: 60 }).primaryKey(),
-  value: varchar('value', { length: 255 }).notNull(),
-  updatedAt: updatedAt(),
-});
+export const settings = mysqlTable(
+  'settings',
+  {
+    companyId: companyId(),
+    key: varchar('key', { length: 60 }).notNull(),
+    value: varchar('value', { length: 255 }).notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [primaryKey({ columns: [t.companyId, t.key] })],
+);
 
 export const products = mysqlTable(
   'products',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     code: varchar('code', { length: 60 }).notNull(),
     isInternalCode: boolean('is_internal_code').notNull().default(false),
     name: varchar('name', { length: 255 }).notNull(),
@@ -125,9 +141,9 @@ export const products = mysqlTable(
     minStock: int('min_stock').notNull().default(0),
     reorderQuantity: int('reorder_quantity').notNull().default(0),
     location: varchar('location', { length: 60 }),
-    costUsd: money('cost_usd'),
-    priceUsd: money('price_usd'),
-    wholesalePriceUsd: money('wholesale_price_usd'),
+    costPen: money('cost_pen'),
+    pricePen: money('price_pen'),
+    wholesalePricePen: money('wholesale_price_pen'),
     wholesaleMinQty: int('wholesale_min_qty'),
     isConsignment: boolean('is_consignment').notNull().default(false),
     notes: text('notes'),
@@ -136,7 +152,7 @@ export const products = mysqlTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex('products_code_uq').on(t.code),
+    uniqueIndex('products_company_code_uq').on(t.companyId, t.code),
     index('products_name_idx').on(t.name),
     index('products_category_idx').on(t.categoryId),
     index('products_cost_center_idx').on(t.costCenterId),
@@ -161,6 +177,7 @@ export const importOrders = mysqlTable(
   'import_orders',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     number: int('number').notNull(),
     supplierId: int('supplier_id').references(() => suppliers.id, { onDelete: 'restrict' }),
     status: varchar('status', { length: 20 }).notNull().default('DRAFT'),
@@ -168,14 +185,13 @@ export const importOrders = mysqlTable(
     orderedAt: date('ordered_at', { mode: 'string' }),
     expectedAt: date('expected_at', { mode: 'string' }),
     receivedAt: date('received_at', { mode: 'string' }),
-    exchangeRate: decimal('exchange_rate', { precision: 8, scale: 4, mode: 'number' }),
     notes: text('notes'),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
-    uniqueIndex('import_orders_number_uq').on(t.number),
+    uniqueIndex('import_orders_company_number_uq').on(t.companyId, t.number),
     index('import_orders_status_idx').on(t.status),
     index('import_orders_supplier_idx').on(t.supplierId),
   ],
@@ -193,7 +209,7 @@ export const importOrderItems = mysqlTable(
       .references(() => products.id, { onDelete: 'restrict' }),
     quantityOrdered: int('quantity_ordered').notNull(),
     quantityReceived: int('quantity_received').notNull().default(0),
-    unitCostUsd: money('unit_cost_usd'),
+    unitCostPen: money('unit_cost_pen'),
     notes: varchar('notes', { length: 255 }),
   },
   (t) => [
@@ -206,6 +222,7 @@ export const stockMovements = mysqlTable(
   'stock_movements',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     productId: int('product_id')
       .notNull()
       .references(() => products.id, { onDelete: 'restrict' }),
@@ -213,7 +230,7 @@ export const stockMovements = mysqlTable(
     reason: varchar('reason', { length: 30 }).notNull(),
     quantity: int('quantity').notNull(),
     stockAfter: int('stock_after').notNull(),
-    unitPriceUsd: money('unit_price_usd'),
+    unitPricePen: money('unit_price_pen'),
     counterparty: varchar('counterparty', { length: 160 }),
     referenceType: varchar('reference_type', { length: 20 }),
     referenceId: int('reference_id'),
@@ -226,7 +243,7 @@ export const stockMovements = mysqlTable(
   },
   (t) => [
     index('stock_movements_product_idx').on(t.productId, t.occurredAt),
-    index('stock_movements_occurred_idx').on(t.occurredAt),
+    index('stock_movements_occurred_idx').on(t.companyId, t.occurredAt),
     index('stock_movements_reference_idx').on(t.referenceType, t.referenceId),
   ],
 );
@@ -235,6 +252,7 @@ export const stockCounts = mysqlTable(
   'stock_counts',
   {
     id: int('id').autoincrement().primaryKey(),
+    companyId: companyId(),
     name: varchar('name', { length: 120 }).notNull(),
     status: varchar('status', { length: 20 }).notNull().default('OPEN'),
     categoryId: int('category_id').references(() => categories.id, { onDelete: 'set null' }),
@@ -244,7 +262,7 @@ export const stockCounts = mysqlTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index('stock_counts_status_idx').on(t.status)],
+  (t) => [index('stock_counts_status_idx').on(t.companyId, t.status)],
 );
 
 export const stockCountItems = mysqlTable(

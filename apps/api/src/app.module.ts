@@ -3,13 +3,17 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from './config/config.module.js';
 import { HealthController } from './health.controller.js';
+import { AccessModule } from './modules/access/access.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
+import { CompanyDirectoryModule } from './modules/company-directory/company-directory.module.js';
 import { CostCentersModule } from './modules/cost-centers/cost-centers.module.js';
 import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { EquipmentModule } from './modules/equipment/equipment.module.js';
 import { ImportsModule } from './modules/imports/imports.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { InternalModule } from './modules/internal/internal.module.js';
+import { ProductImportModule } from './modules/product-import/product-import.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { ReorderModule } from './modules/reorder/reorder.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
@@ -17,15 +21,20 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { DatabaseModule } from './shared/infrastructure/database/database.module.js';
 import { SpreadsheetModule } from './shared/infrastructure/spreadsheet/spreadsheet.module.js';
+import { TenantModule } from './shared/infrastructure/tenant/tenant.module.js';
 import { DomainExceptionFilter } from './shared/presentation/domain-exception.filter.js';
 
 @Module({
   imports: [
     ConfigModule,
     DatabaseModule,
+    TenantModule,
+    CompanyDirectoryModule,
     SpreadsheetModule,
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 600 }]),
     AuthModule,
+    AccessModule,
+    InternalModule,
     UsersModule,
     CategoriesModule,
     CostCentersModule,
@@ -33,6 +42,7 @@ import { DomainExceptionFilter } from './shared/presentation/domain-exception.fi
     SuppliersModule,
     EquipmentModule,
     ProductsModule,
+    ProductImportModule,
     InventoryModule,
     ImportsModule,
     ReorderModule,

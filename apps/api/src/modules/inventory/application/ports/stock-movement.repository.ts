@@ -13,7 +13,7 @@ export interface NewStockMovement {
   reason: MovementReason;
   quantity: number;
   stockAfter: number;
-  unitPriceUsd?: number | null;
+  unitPricePen?: number | null;
   counterparty?: string | null;
   referenceType?: ReferenceType | null;
   referenceId?: number | null;

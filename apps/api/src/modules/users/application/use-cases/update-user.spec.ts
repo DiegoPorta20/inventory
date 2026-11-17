@@ -3,6 +3,7 @@ import { Role } from '../../../../shared/domain/auth.js';
 import { PasswordHasher } from '../ports/password-hasher.js';
 import { UserRepository, type UserChanges } from '../ports/user.repository.js';
 import type { User } from '../../domain/user.js';
+import { UserLimit } from '../user-limit.js';
 import { UpdateUser } from './update-user.js';
 
 class InMemoryUsers extends UserRepository {
@@ -12,6 +13,7 @@ class InMemoryUsers extends UserRepository {
   findAll = async () => this.store;
   findById = async (id: number) => this.store.find((user) => user.id === id) ?? null;
   findByEmail = async (email: string) => this.store.find((user) => user.email === email) ?? null;
+  countActive = async () => this.store.filter((user) => user.isActive).length;
   create = async () => this.store[0] as User;
   recordLogin = async () => undefined;
   update = async (id: number, changes: UserChanges) => {
@@ -29,8 +31,11 @@ class FakeHasher extends PasswordHasher {
   verify = async (plain: string, hash: string) => hash === `hashed:${plain}`;
 }
 
+const noLimit = { assertCanAddActiveUser: async () => undefined } as unknown as UserLimit;
+
 const aUser = (overrides: Partial<User> = {}): User => ({
   id: 1,
+  companyId: 1,
   email: 'a@x.com',
   name: 'A',
   passwordHash: 'h',
@@ -44,7 +49,7 @@ const aUser = (overrides: Partial<User> = {}): User => ({
 
 describe('UpdateUser', () => {
   it('prevents users from deactivating themselves', async () => {
-    const useCase = new UpdateUser(new InMemoryUsers([aUser()]), new FakeHasher());
+    const useCase = new UpdateUser(new InMemoryUsers([aUser()]), new FakeHasher(), noLimit);
     await expect(useCase.execute(1, 1, { isActive: false })).rejects.toMatchObject({
       code: 'CANNOT_MODIFY_SELF',
     });
@@ -52,7 +57,7 @@ describe('UpdateUser', () => {
 
   it('lets an admin deactivate another user and reset their password', async () => {
     const users = new InMemoryUsers([aUser(), aUser({ id: 2, email: 'b@x.com' })]);
-    const result = await new UpdateUser(users, new FakeHasher()).execute(1, 2, {
+    const result = await new UpdateUser(users, new FakeHasher(), noLimit).execute(1, 2, {
       isActive: false,
       password: 'newSecret1',
     });

@@ -21,9 +21,9 @@ export interface CreateProductInput {
   minStock?: number;
   reorderQuantity?: number;
   location?: string | null;
-  costUsd?: number | null;
-  priceUsd?: number | null;
-  wholesalePriceUsd?: number | null;
+  costPen?: number | null;
+  pricePen?: number | null;
+  wholesalePricePen?: number | null;
   wholesaleMinQty?: number | null;
   isConsignment?: boolean;
   notes?: string | null;
@@ -43,9 +43,9 @@ export class CreateProduct {
     await this.references.assertCostCenter(input.costCenterId);
     await this.references.assertEquipment(input.equipmentIds);
     this.references.assertPricing({
-      costUsd: input.costUsd,
-      priceUsd: input.priceUsd,
-      wholesalePriceUsd: input.wholesalePriceUsd,
+      costPen: input.costPen,
+      pricePen: input.pricePen,
+      wholesalePricePen: input.wholesalePricePen,
     });
 
     const isInternalCode = !input.code;
@@ -69,9 +69,9 @@ export class CreateProduct {
         minStock: input.minStock ?? 0,
         reorderQuantity: input.reorderQuantity ?? 0,
         location: input.location ?? null,
-        costUsd: input.costUsd ?? null,
-        priceUsd: input.priceUsd ?? null,
-        wholesalePriceUsd: input.wholesalePriceUsd ?? null,
+        costPen: input.costPen ?? null,
+        pricePen: input.pricePen ?? null,
+        wholesalePricePen: input.wholesalePricePen ?? null,
         wholesaleMinQty: input.wholesaleMinQty ?? null,
         isConsignment: input.isConsignment ?? false,
         notes: input.notes ?? null,

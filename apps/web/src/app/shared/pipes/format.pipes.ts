@@ -22,11 +22,9 @@ const dateOnly = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium', timeZone
 export const formatQuantity = (value: number | null | undefined): string =>
   value == null ? '—' : integer.format(value);
 
-export const formatUsd = (value: number | null | undefined, precise = false): string =>
-  value == null ? '—' : `$ ${(precise ? decimal4 : decimal2).format(value)}`;
-
-export const formatPen = (value: number | null | undefined): string =>
-  value == null ? '—' : `S/ ${decimal2.format(value)}`;
+/** Soles. precise shows up to four decimals (unit costs); otherwise two. */
+export const formatPen = (value: number | null | undefined, precise = false): string =>
+  value == null ? '—' : `S/ ${(precise ? decimal4 : decimal2).format(value)}`;
 
 export function formatDateTime(value: string | Date | null | undefined): string {
   return value ? dateTime.format(new Date(value)) : '—';
@@ -56,17 +54,10 @@ export class SignedQuantityPipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'usd' })
-export class UsdPipe implements PipeTransform {
-  transform(value: number | null | undefined, precise = false): string {
-    return formatUsd(value, precise);
-  }
-}
-
 @Pipe({ name: 'pen' })
 export class PenPipe implements PipeTransform {
-  transform(value: number | null | undefined): string {
-    return formatPen(value);
+  transform(value: number | null | undefined, precise = false): string {
+    return formatPen(value, precise);
   }
 }
 
@@ -87,7 +78,6 @@ export class DateOnlyPipe implements PipeTransform {
 export const FORMAT_PIPES = [
   QuantityPipe,
   SignedQuantityPipe,
-  UsdPipe,
   PenPipe,
   DateTimePipe,
   DateOnlyPipe,

@@ -8,17 +8,19 @@ import {
   MOVEMENT_TYPE_TONES,
 } from '../../shared/models/labels';
 import type { DashboardSummary } from '../../shared/models/models';
-import { FORMAT_PIPES, formatQuantity, formatUsd } from '../../shared/pipes/format.pipes';
+import { FORMAT_PIPES, formatQuantity, formatPen } from '../../shared/pipes/format.pipes';
 import { BadgeComponent, StockBadgeComponent } from '../../shared/ui/badge.components';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { PageHeaderComponent, StatCardComponent } from '../../shared/ui/layout.components';
 import { ErrorStateComponent } from '../../shared/ui/states.components';
+import { CanDirective } from '../../core/config/can.directive';
 
 const TREND_DAYS = 30;
 
 @Component({
   selector: 'app-dashboard-page',
   imports: [
+    CanDirective,
     RouterLink,
     FORMAT_PIPES,
     BadgeComponent,
@@ -62,16 +64,20 @@ const TREND_DAYS = 30;
           "
         />
         <ui-stat-card
+          *appCan="'products.costs.view'"
           label="Valor del inventario"
-          [value]="d.totals.inventoryValueUsd | usd"
+          [value]="d.totals.inventoryValuePen | pen"
           [hint]="
-            d.totals.inventoryValueUsd === 0 ? 'Registra costos para calcularlo' : 'A costo, en USD'
+            d.totals.inventoryValuePen === 0
+              ? 'Registra costos para calcularlo'
+              : 'A costo, en soles'
           "
         />
         <ui-stat-card
+          *appCan="'products.prices.view'"
           label="Valor a precio de venta"
-          [value]="d.totals.inventoryValueAtPriceUsd | usd"
-          hint="Sin IGV, en USD"
+          [value]="d.totals.inventoryValueAtPricePen | pen"
+          hint="En soles, sin IGV"
         />
         <ui-stat-card
           label="En camino"
@@ -84,7 +90,7 @@ const TREND_DAYS = 30;
         <a
           routerLink="/products"
           [queryParams]="{ stockStatus: 'OUT' }"
-          class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md"
+          class="card card-lift flex items-center gap-4 p-4"
         >
           <span
             class="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600"
@@ -100,7 +106,7 @@ const TREND_DAYS = 30;
         <a
           routerLink="/products"
           [queryParams]="{ stockStatus: 'LOW' }"
-          class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md"
+          class="card card-lift flex items-center gap-4 p-4"
         >
           <span
             class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600"
@@ -116,7 +122,7 @@ const TREND_DAYS = 30;
         <a
           routerLink="/products"
           [queryParams]="{ stockStatus: 'UNCONFIGURED' }"
-          class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md"
+          class="card card-lift flex items-center gap-4 p-4"
         >
           <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600"
             ><ui-icon name="info" [size]="5"
@@ -129,9 +135,10 @@ const TREND_DAYS = 30;
           </span>
         </a>
         <a
+          *appCan="'products.prices.view'"
           routerLink="/products"
           [queryParams]="{ hasPrice: false }"
-          class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md"
+          class="card card-lift flex items-center gap-4 p-4"
         >
           <span
             class="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
@@ -221,7 +228,10 @@ const TREND_DAYS = 30;
                   >
                 </div>
                 <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div class="h-full rounded-full bg-brand-500" [style.width.%]="row.percent"></div>
+                  <div
+                    class="meter-fill h-full rounded-full bg-brand-500"
+                    [style.width.%]="row.percent"
+                  ></div>
                 </div>
               </li>
             }
@@ -385,5 +395,5 @@ export class DashboardPage {
   });
 
   protected readonly formatQuantity = formatQuantity;
-  protected readonly formatUsd = formatUsd;
+  protected readonly formatPen = formatPen;
 }

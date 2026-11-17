@@ -12,9 +12,9 @@ export interface InventoryProductRef {
 export interface PriceUpdate {
   productId: number;
   code: string;
-  priceUsd: number | null;
+  pricePen: number | null;
   priceVariants: number;
-  wholesalePriceUsd: number | null;
+  wholesalePricePen: number | null;
   wholesaleMinQty: number | null;
   specification: string | null;
   costCenter: string | null;
@@ -89,10 +89,16 @@ const sectionEquipment = (section: string): string[] => {
 
 const roundPrice = (value: number): number => Math.round(value * 10_000) / 10_000;
 
+/** The legacy price list is in USD; it is converted to soles with its own exchange rate. */
+export interface PriceConversion {
+  igvRate: number;
+  exchangeRate: number;
+}
+
 export function planPrices(
   rows: PriceRow[],
   inventory: InventoryProductRef[],
-  igvRate: number,
+  conversion: PriceConversion,
 ): PricePlan {
   const byCode = new Map(inventory.map((product) => [product.code, product]));
   const byName = new Map<string, InventoryProductRef[]>();
@@ -118,13 +124,13 @@ export function planPrices(
   }
 
   const updates = [...grouped.values()].map(({ product, rows: productRows }) =>
-    buildUpdate(product, productRows, igvRate),
+    buildUpdate(product, productRows, conversion),
   );
   return {
     updates,
     missing,
     productsWithoutPrice:
-      inventory.length - updates.filter((update) => update.priceUsd !== null).length,
+      inventory.length - updates.filter((update) => update.pricePen !== null).length,
   };
 
   function matchProduct(code: string | null, name: string): InventoryProductRef | undefined {
@@ -140,16 +146,21 @@ export function planPrices(
   }
 }
 
-function buildUpdate(product: InventoryProductRef, rows: PriceRow[], igvRate: number): PriceUpdate {
+function buildUpdate(
+  product: InventoryProductRef,
+  rows: PriceRow[],
+  { igvRate, exchangeRate }: PriceConversion,
+): PriceUpdate {
   const priced = rows.filter((row) => row.priceUsd !== null);
   const weight = (row: PriceRow) => Math.max(row.totalQuantity ?? 1, 1);
   const totalWeight = priced.reduce((sum, row) => sum + weight(row), 0);
-  const priceUsd =
+  const pricePen =
     priced.length === 0
       ? null
       : roundPrice(
-          priced.reduce((sum, row) => sum + (row.priceUsd as number) * weight(row), 0) /
-            totalWeight,
+          (priced.reduce((sum, row) => sum + (row.priceUsd as number) * weight(row), 0) /
+            totalWeight) *
+            exchangeRate,
         );
 
   const wholesale = rows.find(
@@ -161,10 +172,10 @@ function buildUpdate(product: InventoryProductRef, rows: PriceRow[], igvRate: nu
   return {
     productId: product.id,
     code: product.code,
-    priceUsd,
+    pricePen,
     priceVariants: new Set(priced.map((row) => Math.round((row.priceUsd as number) * 100))).size,
-    wholesalePriceUsd: wholesale
-      ? roundPrice((wholesale.wholesaleUsdWithIgv as number) / (1 + igvRate))
+    wholesalePricePen: wholesale
+      ? roundPrice(((wholesale.wholesaleUsdWithIgv as number) * exchangeRate) / (1 + igvRate))
       : null,
     wholesaleMinQty: wholesale ? (wholesale.wholesaleMinQty as number) : null,
     specification:

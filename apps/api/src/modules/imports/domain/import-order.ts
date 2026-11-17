@@ -13,7 +13,6 @@ export interface ImportOrder {
   orderedAt: string | null;
   expectedAt: string | null;
   receivedAt: string | null;
-  exchangeRate: number | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -23,7 +22,7 @@ export interface ImportOrderSummary extends ImportOrder {
   itemCount: number;
   totalOrdered: number;
   totalReceived: number;
-  totalCostUsd: number;
+  totalCostPen: number;
 }
 
 export interface ImportOrderItem {
@@ -35,7 +34,7 @@ export interface ImportOrderItem {
   unit: string;
   quantityOrdered: number;
   quantityReceived: number;
-  unitCostUsd: number | null;
+  unitCostPen: number | null;
   notes: string | null;
 }
 

@@ -24,6 +24,7 @@
     "db:seed": "pnpm --filter @inventory/api db:seed",
     "db:import-excel": "pnpm --filter @inventory/api db:import-excel",
     "db:import-prices": "pnpm --filter @inventory/api db:import-prices",
+    "db:seed-sample": "pnpm --filter @inventory/api db:seed-sample",
     "db:seed-demo": "pnpm --filter @inventory/api db:seed-demo"
   },
   "devDependencies": {
